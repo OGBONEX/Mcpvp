@@ -18,8 +18,14 @@ commands:
     description: Join or leave kit matchmaking
     usage: /queue
   stats:
-    description: View player match statistics
-    usage: /stats [player]
+    description: View player match statistics and leaderboard
+    usage: /stats [player|top]
+  duel:
+    description: Challenge another player to a duel
+    usage: /duel <player|accept|deny>
+  spec:
+    description: Spectate an active match
+    usage: /spec <player|leave>
 permissions:
   mcpvp.admin:
     description: Allows administration of MCPvP
