@@ -32,6 +32,10 @@ commands:
   match:
     description: View or forfeit your current match
     usage: /match <info|forfeit>
+  rank:
+    description: View a player's current MCPvP rank
+    usage: /rank [player]
+    aliases: [ranks]
 permissions:
   mcpvp.admin:
     description: Allows administration of MCPvP
