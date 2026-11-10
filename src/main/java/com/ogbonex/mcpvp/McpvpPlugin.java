@@ -146,7 +146,13 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         String kit = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
         if (!kits.exists(kit)) return;
         player.closeInventory();
-        queues.join(player, kit);
+        String queuedKit = queues.queuedKit(player.getUniqueId());
+        if (queuedKit != null && queuedKit.equalsIgnoreCase(kit)) {
+            queues.leave(player.getUniqueId());
+            msg(player, "You left the " + kit + " queue.");
+        } else {
+            queues.join(player, kit);
+        }
     }
     @EventHandler public void onJoin(PlayerJoinEvent event) {
         Bukkit.getScheduler().runTaskLater(this, () -> {
@@ -553,6 +559,11 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         void join(Player player, String kit) {
             if (!kits.exists(kit)) { msg(player,"Unknown kit. Use /kit list."); return; }
             if (matches.inMatch(player.getUniqueId())) { msg(player,"You are already in a match."); return; }
+            String current = queuedKit(player.getUniqueId());
+            if (current != null && current.equalsIgnoreCase(kit)) {
+                msg(player, "You are already queued for " + kit + " (position " + position(player.getUniqueId()) + "). Use /leave to leave.");
+                return;
+            }
             leave(player.getUniqueId());
             LinkedList<UUID> line=waiting.computeIfAbsent(clean(kit), k -> new LinkedList<>());
             while (!line.isEmpty()) {
@@ -563,12 +574,25 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
                 }
             }
             line.add(player.getUniqueId());
-            msg(player,"Queued for " + kit + ". Waiting for an opponent...");
+            msg(player,"Queued for " + kit + ". Position: " + line.size() + ". Use /leave or click this kit again to leave.");
         }
         int count(String kit) { return waiting.getOrDefault(clean(kit), new LinkedList<>()).size(); }
-        void leave(UUID id) {
-            for (LinkedList<UUID> line : waiting.values()) line.remove(id);
+        String queuedKit(UUID id) {
+            for (Map.Entry<String, LinkedList<UUID>> entry : waiting.entrySet()) {
+                if (entry.getValue().contains(id)) return entry.getKey();
+            }
+            return null;
+        }
+        int position(UUID id) {
+            String kit = queuedKit(id);
+            if (kit == null) return 0;
+            return waiting.get(kit).indexOf(id) + 1;
+        }
+        boolean leave(UUID id) {
+            boolean removed = false;
+            for (LinkedList<UUID> line : waiting.values()) removed |= line.remove(id);
             waiting.values().removeIf(LinkedList::isEmpty);
+            return removed;
         }
         void clear() { waiting.clear(); }
     }
@@ -635,11 +659,26 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     private final class QueueCommand implements CommandExecutor {
         public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
             if (!(s instanceof Player p)) { msg(s,"Players only."); return true; }
-            if (a.length==0) { msg(s,"/queue join <kit>, /queue leave, /queue status <kit>"); return true; }
-            if (a[0].equalsIgnoreCase("join") && a.length>1) queues.join(p,a[1]);
-            else if (a[0].equalsIgnoreCase("leave")) { queues.leave(p.getUniqueId()); msg(p,"You left the queue."); }
-            else if (a[0].equalsIgnoreCase("status") && a.length>1) msg(p,"Players waiting for " + a[1] + ": " + queues.count(a[1]));
-            else msg(p,"Usage: /queue join <kit>, /queue leave or /queue status <kit>");
+            if (a.length==0 || a[0].equalsIgnoreCase("status")) {
+                if (a.length > 1) {
+                    msg(p,"Players waiting for " + a[1] + ": " + queues.count(a[1]));
+                } else {
+                    String kit = queues.queuedKit(p.getUniqueId());
+                    if (kit == null) msg(p, "You are not currently queued.");
+                    else msg(p, "Queue: " + kit + " | Position: " + queues.position(p.getUniqueId()) + " | Waiting: " + queues.count(kit) + ". Use /leave to leave.");
+                }
+            } else if (a[0].equalsIgnoreCase("join") && a.length>1) queues.join(p,a[1]);
+            else if (a[0].equalsIgnoreCase("leave")) {
+                msg(p, queues.leave(p.getUniqueId()) ? "You left the queue." : "You are not currently queued.");
+            } else msg(p,"Usage: /queue join <kit>, /queue leave or /queue status [kit]");
+            return true;
+        }
+    }
+
+    private final class LeaveCommand implements CommandExecutor {
+        public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+            if (!(sender instanceof Player player)) { msg(sender, "Players only."); return true; }
+            msg(player, queues.leave(player.getUniqueId()) ? "You left the queue." : "You are not currently queued.");
             return true;
         }
     }
@@ -670,7 +709,12 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
                 ItemStack icon = new ItemStack(kits.icon(name));
                 ItemMeta meta = icon.getItemMeta();
                 meta.setDisplayName(ChatColor.GREEN + name);
-                meta.setLore(List.of(ChatColor.GRAY + "Click to queue for this kit", ChatColor.DARK_GRAY + "Waiting: " + queues.count(name), ChatColor.DARK_GRAY + "Icon: " + kits.icon(name).name()));
+                boolean queuedHere = name.equalsIgnoreCase(Objects.toString(queues.queuedKit(player.getUniqueId()), ""));
+                meta.setLore(List.of(
+                        ChatColor.GRAY + (queuedHere ? "Click again to leave this queue" : "Click to queue for this kit"),
+                        ChatColor.DARK_GRAY + "Waiting: " + queues.count(name),
+                        ChatColor.DARK_GRAY + "Your position: " + (queuedHere ? queues.position(player.getUniqueId()) : "Not queued"),
+                        ChatColor.DARK_GRAY + "Icon: " + kits.icon(name).name()));
                 icon.setItemMeta(meta);
                 menu.addItem(icon);
             }
