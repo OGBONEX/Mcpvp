@@ -3,7 +3,7 @@ version: '${version}'
 main: com.ogbonex.mcpvp.McpvpPlugin
 api-version: '1.21.11'
 authors: [OGBONEX]
-description: A classic-inspired MCPvP minigame plugin.
+description: "MCPvP: The Arena — a competitive PvP network toolkit with kit matchmaking, duels, ranked-ready stats and custom arenas."
 commands:
   mcpvp:
     description: Main MCPvP command
@@ -29,6 +29,9 @@ commands:
   kits:
     description: Open the kit queue selector
     usage: /kits
+  menu:
+    description: Open the MCPvP navigation menu
+    usage: /menu
   match:
     description: View or forfeit your current match
     usage: /match <info|forfeit>
