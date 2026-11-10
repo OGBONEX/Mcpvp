@@ -6,9 +6,11 @@ settings:
     match-mode: same-kit
   matches:
     restore-inventory-after-match: true
-    border-start-size: 80.0
-    border-end-size: 18.0
-    border-shrink-seconds: 90
+matches:
+  border-start-size: 200.0
+  border-end-size: 20.0
+  border-shrink-seconds: 300
+  max-arena-snapshot-blocks: 100000
 duels:
   default-kit: ""
 lobby:
