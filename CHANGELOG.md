@@ -18,3 +18,9 @@ All notable MCPvP changes are documented here.
 
 ### Versioning
 - Patch release sequence: 0.7.0 → 0.7.1 → 0.7.2. Minor version 0.8.0 is not used for this patch update.
+
+
+## 0.7.3-SNAPSHOT
+- Added a main navigation GUI at `/menu` and `/mcpvp menu`.
+- Added kit-specific GUI icons, automatic icon selection, configurable icon materials and queue-count lore.
+- Refreshed plugin description and README branding to MCPvP — The Arena.
