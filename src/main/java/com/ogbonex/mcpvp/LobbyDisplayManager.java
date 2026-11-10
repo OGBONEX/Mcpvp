@@ -13,28 +13,15 @@ import java.util.function.ToIntFunction;
 
 final class LobbyDisplayManager {
     private final JavaPlugin plugin;
-    private final ToIntFunction<UUID> wins;
+    private final java.util.function.Function<UUID, String> ranks;
     private final Map<UUID, Scoreboard> boards = new HashMap<>();
 
-    LobbyDisplayManager(JavaPlugin plugin, ToIntFunction<UUID> wins) {
+    LobbyDisplayManager(JavaPlugin plugin, java.util.function.Function<UUID, String> ranks) {
         this.plugin = plugin;
-        this.wins = wins;
+        this.ranks = ranks;
     }
 
-    String rankName(int count) {
-        Map<?, ?> tier = selectedTier(count);
-        return tier == null ? "Unranked" : color(String.valueOf(tier.containsKey("name") ? tier.get("name") : "Unranked"));
-    }
-
-    private Map<?, ?> selectedTier(int count) {
-        Map<?, ?> selected = null;
-        for (Map<?, ?> tier : plugin.getConfig().getMapList("ranks.tiers")) {
-            int required = tier.get("min-wins") instanceof Number n ? n.intValue() : 0;
-            int selectedRequired = selected != null && selected.get("min-wins") instanceof Number n ? n.intValue() : -1;
-            if (count >= required && (selected == null || required > selectedRequired)) selected = tier;
-        }
-        return selected;
-    }
+    String rankName(UUID playerId) { return ranks.apply(playerId); }
 
     private String color(String value) {
         return ChatColor.translateAlternateColorCodes('&', value);
@@ -45,9 +32,9 @@ final class LobbyDisplayManager {
     }
 
     void refresh(Player player) {
-        int count = wins.applyAsInt(player.getUniqueId());
-        Map<?, ?> tier = selectedTier(count);
-        String prefix = tier == null ? "&7[Unranked]" : String.valueOf(tier.containsKey("prefix") ? tier.get("prefix") : "&7[Unranked]");
+        int count = plugin.getConfig().getInt("display-wins-placeholder", 0);
+        String rank = ranks.apply(player.getUniqueId());
+        String prefix = plugin.getConfig().getString("rank-prefixes." + rank.toLowerCase(java.util.Locale.ROOT).replace(" ", "-").replace("_", "-"), "&7[" + rank + "]");
         player.setPlayerListName(color(prefix) + ChatColor.RESET + " " + player.getName());
         player.setPlayerListHeaderFooter(
                 color(plugin.getConfig().getString("tab.header", "&6&lMCPvP")) + "\n" +
@@ -71,7 +58,7 @@ final class LobbyDisplayManager {
         List<String> lines = List.of(
                 color("&7" + Bukkit.getOnlinePlayers().size() + " online"),
                 color("&f "),
-                color("&eRank: &f" + ChatColor.stripColor(rankName(count))),
+                color("&eRank: &f" + rank),
                 color("&eWins: &f" + count),
                 color("&eQueue: &f" + plugin.getConfig().getString("scoreboard.queue-label", "Use /kits")),
                 color("&a "),
