@@ -10,6 +10,13 @@ This project follows Semantic Versioning:
 ## [Unreleased]
 
 ### Added
+- 80 themed arena preset slots, ready for administrators to configure with physical maps and spawn points.
+- Configurable tab header/footer and rank prefixes.
+- Configurable sidebar scoreboard with online count, rank and wins.
+- Win-based rank tiers and `/rank [player]` command.
+
+
+### Added
 - Queue population lookup with `/queue status <kit>`.
 - Kill and death statistics in player profiles.
 - Top kills leaderboard through `/stats top kills`.
