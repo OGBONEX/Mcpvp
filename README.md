@@ -4,11 +4,11 @@
 
 ## Current development status
 
-Development version: `0.7.3-SNAPSHOT`
+Development version: `0.7.5-SNAPSHOT`
 
 Implemented:
 - Main navigation GUI via `/menu` or `/mcpvp menu`.
-- Kit selector GUI via `/kits`, with kit-specific item icons and queue counts.
+- Queue GUI via `/queue`, with kit-specific item icons, queue counts and personal queue position.
 - Kit icons automatically use the first non-empty item in the creator's inventory.
 - Admins can customize icons with `/kit icon <name> <material>`.
 - Inventory-based kit creation, listing, deletion and giving.
@@ -25,7 +25,7 @@ Implemented:
 ## GUI navigation
 
 - `/menu` — opens the main MCPvP menu.
-- `/kits` — opens the kit selector. Each kit displays its configured icon and current queue count. Clicking a kit joins its queue.
+- `/queue` — opens the kit selector. Each kit displays its configured icon, queue count and your position. Clicking a kit joins its queue; clicking the same kit again leaves.
 - Main menu buttons provide shortcuts to the kit selector, personal statistics, wins leaderboard and arena list.
 
 ## Kit management
@@ -35,8 +35,11 @@ Implemented:
 - `/kit icon <name> <material>` — changes a kit's GUI icon (admin; use a Bukkit material name such as DIAMOND_SWORD).
 - `/kit delete <name>` — deletes a kit (admin).
 - `/kit give <player> <name>` — gives a saved kit to a player (admin).
+- `/queue` — opens the queue GUI.
 - `/queue join <kit>` — joins that kit's matchmaking queue.
-- `/queue leave` — leaves matchmaking.
+- `/leave` or `/queue leave` — leaves matchmaking.
+- Clicking the same kit again in the queue GUI leaves that queue.
+- `/queue status` — shows your current kit, position and waiting count.
 - `/queue status <kit>` — checks the number of players waiting for a kit.
 
 ## Match commands
@@ -93,13 +96,14 @@ The plugin JAR is written to `build/libs/`.
 
 ## GitHub Releases
 
-Pushing a version tag such as `v0.7.3` triggers the release workflow. It builds the plugin and publishes a GitHub Release with generated release notes and the compiled JAR attached. Normal pushes to `main` run the build workflow.
+Pushing a version tag such as `v0.7.5` triggers the release workflow. It builds the plugin and publishes a GitHub Release with generated release notes and the compiled JAR attached. Normal pushes to `main` run the build workflow.
 
 
 ## Queue controls
 
+- `/queue` opens the kit selection GUI.
 - `/leave` or `/queue leave` leaves your current queue.
-- Clicking the same kit again in `/kits` leaves that kit's queue.
+- Clicking the same kit again in the queue GUI leaves that kit's queue.
 - Clicking a different kit switches your queue to the newly selected kit.
 - `/queue status` shows your current kit, queue position, and number of waiting players.
-- The kit selector displays your current queue state and position.
+- `/kits` is no longer registered; use `/queue` instead.
