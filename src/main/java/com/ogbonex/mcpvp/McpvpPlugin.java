@@ -11,6 +11,9 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -47,6 +50,8 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         bind("stats", new StatsCommand());
         bind("duel", new DuelCommand());
         bind("spec", new SpectatorCommand());
+        bind("kits", new KitsMenuCommand());
+        bind("match", new MatchCommand());
         getLogger().info("MCPvP " + getPluginMeta().getVersion() + " enabled.");
     }
 
@@ -100,6 +105,17 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     }
     @EventHandler public void onRespawn(PlayerRespawnEvent event) {
         matches.handleRespawn(event);
+    }
+    @EventHandler public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!ChatColor.stripColor(event.getView().getTitle()).equals("MCPvP Kits")) return;
+        event.setCancelled(true);
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || !clicked.hasItemMeta()) return;
+        String kit = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+        if (!kits.exists(kit)) return;
+        player.closeInventory();
+        queues.join(player, kit);
     }
     @EventHandler public void onJoin(PlayerJoinEvent event) {
         Bukkit.getScheduler().runTaskLater(this, () -> matches.restorePending(event.getPlayer()), 1L);
@@ -172,6 +188,11 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (w == null || !data.contains(base + ".x")) return null;
             return new Location(w, data.getDouble(base + ".x"), data.getDouble(base + ".y"),
                     data.getDouble(base + ".z"), (float)data.getDouble(base + ".yaw"), (float)data.getDouble(base + ".pitch"));
+        }
+        boolean delete(String name) {
+            String id = clean(name);
+            if (!data.contains(id)) return false;
+            data.set(id, null); save(); return true;
         }
         List<String> names() {
             return data.getKeys(false).stream().sorted().toList();
@@ -267,6 +288,18 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (s != null) s.restore(p);
         }
         boolean inMatch(UUID id) { return active.containsKey(id); }
+        void forfeit(Player player) {
+            Match m = active.get(player.getUniqueId());
+            if (m == null) { msg(player, "You are not in a match."); return; }
+            Player winner = Bukkit.getPlayer(m.opponent(player.getUniqueId()));
+            stats.add(player.getUniqueId(), "losses", 1);
+            if (winner != null) {
+                stats.add(winner.getUniqueId(), "wins", 1);
+                msg(winner, "Your opponent forfeited. You win!");
+            }
+            msg(player, "You forfeited the match.");
+            finish(m);
+        }
         Player opponent(Player player) {
             Match m = active.get(player.getUniqueId());
             return m == null ? null : Bukkit.getPlayer(m.opponent(player.getUniqueId()));
@@ -300,7 +333,8 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (matches.inMatch(challengerId) || matches.inMatch(target.getUniqueId())) {
                 msg(target, "A player is already in a match."); return;
             }
-            String kit = getConfig().getString("duels.default-kit", kits.names().stream().findFirst().orElse(""));
+            String kit = getConfig().getString("duels.default-kit", "");
+            if (kit.isBlank()) kit = kits.names().stream().findFirst().orElse("");
             if (kit.isBlank() || !kits.exists(kit)) { msg(target, "No valid default duel kit is configured."); return; }
             matches.start(challenger, target, kit);
         }
@@ -394,13 +428,14 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     private final class ArenaCommand implements CommandExecutor {
         public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
             if (!s.hasPermission("mcpvp.admin") || !(s instanceof Player p)) { msg(s,"This command requires an admin in-game."); return true; }
-            if (a.length==0) { msg(s,"/arena create <name>, /arena setspawn <name> <a|b>, /arena list"); return true; }
+            if (a.length==0) { msg(s,"/arena create <name>, /arena setspawn <name> <a|b>, /arena delete <name>, /arena list"); return true; }
             switch(a[0].toLowerCase(Locale.ROOT)) {
                 case "create" -> msg(s,a.length>1 && arenas.create(a[1]) ? "Arena created." : "Could not create arena.");
                 case "setspawn" -> {
                     if (a.length<3 || !(a[2].equalsIgnoreCase("a") || a[2].equalsIgnoreCase("b"))) { msg(s,"Usage: /arena setspawn <name> <a|b>"); break; }
                     msg(s,arenas.set(a[1],a[2].equalsIgnoreCase("a")?"spawn-a":"spawn-b",p.getLocation()) ? "Arena spawn saved." : "Arena not found.");
                 }
+                case "delete" -> msg(s,a.length>1 && arenas.delete(a[1]) ? "Arena deleted." : "Arena not found.");
                 case "list" -> msg(s,"Arenas: " + String.join(", ",arenas.names()));
                 default -> msg(s,"Unknown subcommand.");
             }
@@ -430,6 +465,40 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             } else if (a[0].equalsIgnoreCase("reload") && s.hasPermission("mcpvp.admin")) {
                 reloadConfig(); loadLobby(); msg(s,"Configuration reloaded.");
             } else msg(s,"Usage: /mcpvp lobby, /mcpvp setlobby, /mcpvp reload");
+            return true;
+        }
+    }
+
+    private final class KitsMenuCommand implements CommandExecutor {
+        public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+            if (!(sender instanceof Player player)) { msg(sender, "Players only."); return true; }
+            List<String> names = kits.names();
+            if (names.isEmpty()) { msg(player, "No kits have been created yet."); return true; }
+            Inventory menu = Bukkit.createInventory(null, Math.min(54, ((names.size() + 8) / 9) * 9), ChatColor.DARK_AQUA + "MCPvP Kits");
+            for (String name : names.stream().limit(54).toList()) {
+                ItemStack icon = new ItemStack(Material.IRON_SWORD);
+                ItemMeta meta = icon.getItemMeta();
+                meta.setDisplayName(ChatColor.GREEN + name);
+                meta.setLore(List.of(ChatColor.GRAY + "Click to queue for this kit"));
+                icon.setItemMeta(meta);
+                menu.addItem(icon);
+            }
+            player.openInventory(menu);
+            return true;
+        }
+    }
+
+    private final class MatchCommand implements CommandExecutor {
+        public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+            if (!(sender instanceof Player player)) { msg(sender, "Players only."); return true; }
+            if (args.length == 0 || args[0].equalsIgnoreCase("info")) {
+                Player opponent = matches.opponent(player);
+                if (opponent == null) msg(player, "You are not currently in a match.");
+                else msg(player, "Your opponent is " + opponent.getName() + ".");
+                return true;
+            }
+            if (args[0].equalsIgnoreCase("forfeit")) matches.forfeit(player);
+            else msg(player, "Usage: /match info or /match forfeit");
             return true;
         }
     }
