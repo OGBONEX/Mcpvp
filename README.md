@@ -4,7 +4,7 @@ A classic-inspired PvP minigame plugin for **Paper 1.21.11**, built with **Java 
 
 ## Current development status
 
-Development version: `0.5.0-SNAPSHOT`
+Development version: `0.6.0-SNAPSHOT`
 
 Implemented in this milestone:
 - Create, list, delete and give inventory-based kits.
@@ -18,6 +18,11 @@ Implemented in this milestone:
 - Match status and forfeit commands.
 - Arena deletion command.
 - Queue status lookup by kit.
+- 80 named arena preset slots across multiple themes; administrators must build/import maps and set both spawn points.
+- Configurable tab header/footer and rank prefixes.
+- Configurable sidebar scoreboard.
+- Win-based ranks: Rookie, Fighter, Warrior, Elite, Champion and Legend.
+- `/rank [online-player]` displays a player's rank and win count.
 - Player kill/death statistics and top-kills leaderboard.
 - Lobby location and reload commands.
 - YAML configuration and data files.
@@ -34,6 +39,8 @@ Implemented in this milestone:
 | `/arena setspawn <name> <a|b>` | Set arena spawn points | `mcpvp.admin` |
 | `/arena delete <name>` | Delete an arena | `mcpvp.admin` |
 | `/arena list` | List arenas | `mcpvp.admin` |
+| `/arena presets` | Show available arena preset slots | Everyone |
+| `/rank [player]` | View a player's win-based rank | Everyone |
 | `/queue join <kit>` | Queue for a same-kit match | Everyone |
 | `/queue leave` | Leave matchmaking | Everyone |
 | `/queue status <kit>` | See how many players are waiting for a kit | Everyone |
@@ -77,3 +84,11 @@ The JAR is written to `build/libs/`.
 ## Versioning
 
 MCPvP follows Semantic Versioning. Development versions use `0.x` until the first tested stable release. See [CHANGELOG.md](CHANGELOG.md).
+
+## Arena presets
+
+The plugin seeds 80 named arena slots from `arena-presets.yml`. These are preset records, not prebuilt world downloads. For each map, build or import the physical arena, then set both spawns using `/arena setspawn <name> a` and `/arena setspawn <name> b`. Only arenas with both spawn points configured are eligible for matchmaking.
+
+## Tab, scoreboard and ranks
+
+The tab header/footer, sidebar scoreboard and rank tiers are configurable in `config.yml`. Default ranks are Rookie (0 wins), Fighter (10), Warrior (25), Elite (50), Champion (100) and Legend (250). Rank prefixes appear next to player names in the tab list.
