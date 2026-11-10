@@ -40,6 +40,18 @@ commands:
     description: View or manage player ranks
     usage: /rank <player|set|add|remove>
     aliases: [ranks]
+  elo:
+    description: View your competitive ELO rating and tier
+    usage: /elo
+  streak:
+    description: View your current and best killstreak
+    usage: /streak
+  history:
+    description: View your recent match history
+    usage: /history
+  rematch:
+    description: Request or accept a rematch
+    usage: /rematch [accept]
 permissions:
   mcpvp.admin:
     description: Allows administration
