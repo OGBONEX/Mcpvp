@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.4-SNAPSHOT
+- Added `/leave` (alias `/qleave`) to leave matchmaking.
+- Clicking the currently queued kit in `/kits` now toggles queue exit.
+- Selecting another kit switches queues.
+- Added personal queue position and current queue details to `/queue status`.
+- Improved kit selector lore with live queue state and position.
+
 All notable MCPvP changes are documented here.
 
 ## [0.7.1] - Unreleased
