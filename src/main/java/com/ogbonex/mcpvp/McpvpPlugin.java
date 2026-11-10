@@ -7,6 +7,9 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.*;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.block.Block;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -92,6 +95,13 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
 
     private String clean(String input) {
         return input.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_-]", "");
+    }
+
+    @EventHandler public void onBlockPlace(BlockPlaceEvent event) {
+        if (matches.inMatch(event.getPlayer().getUniqueId()) && !matches.canEdit(event.getPlayer(), event.getBlockPlaced().getLocation())) event.setCancelled(true);
+    }
+    @EventHandler public void onBlockBreak(BlockBreakEvent event) {
+        if (matches.inMatch(event.getPlayer().getUniqueId()) && !matches.canEdit(event.getPlayer(), event.getBlock().getLocation())) event.setCancelled(true);
     }
 
     @EventHandler public void onDeath(PlayerDeathEvent event) {
@@ -222,6 +232,18 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             return new Location(w, data.getDouble(base + ".x"), data.getDouble(base + ".y"),
                     data.getDouble(base + ".z"), (float)data.getDouble(base + ".yaw"), (float)data.getDouble(base + ".pitch"));
         }
+        boolean hasRegion(String name) { return get(name, "region.pos1") != null && get(name, "region.pos2") != null; }
+        boolean contains(String name, Location location) {
+            Location one=get(name,"region.pos1"), two=get(name,"region.pos2");
+            if(one==null || two==null || location.getWorld()==null || !location.getWorld().equals(one.getWorld()) || !one.getWorld().equals(two.getWorld())) return false;
+            return location.getBlockX()>=Math.min(one.getBlockX(),two.getBlockX()) && location.getBlockX()<=Math.max(one.getBlockX(),two.getBlockX())
+                    && location.getBlockY()>=Math.min(one.getBlockY(),two.getBlockY()) && location.getBlockY()<=Math.max(one.getBlockY(),two.getBlockY())
+                    && location.getBlockZ()>=Math.min(one.getBlockZ(),two.getBlockZ()) && location.getBlockZ()<=Math.max(one.getBlockZ(),two.getBlockZ());
+        }
+        World world(String name) {
+            Location corner=get(name,"region.pos1");
+            return corner==null ? null : corner.getWorld();
+        }
         boolean delete(String name) {
             String id = clean(name);
             if (!data.contains(id)) return false;
@@ -265,7 +287,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             }
         }
         private final class Match {
-            final UUID one, two; final String kit, arena; WorldBorder border;
+            final UUID one, two; final String kit, arena; WorldBorder border; Map<String,String> arenaSnapshot;
             Match(Player a, Player b, String kit, String arena) {
                 one=a.getUniqueId(); two=b.getUniqueId(); this.kit=kit; this.arena=arena;
             }
@@ -278,6 +300,14 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (sa == null || sb == null) return false;
             snapshots.put(a.getUniqueId(), new Snapshot(a)); snapshots.put(b.getUniqueId(), new Snapshot(b));
             Match match = new Match(a,b,kit,arena); active.put(match.one,match); active.put(match.two,match);
+            if (!arenas.hasRegion(arena)) {
+                active.remove(match.one); active.remove(match.two);
+                snapshots.remove(match.one); snapshots.remove(match.two);
+                msg(a, "This arena needs /arena pos1 and /arena pos2 configured before it can be used.");
+                msg(b, "This arena is missing its editable/reset region.");
+                return false;
+            }
+            match.arenaSnapshot = captureArena(arena);
             a.teleport(sa); b.teleport(sb); kits.apply(a,kit); kits.apply(b,kit);
             a.sendMessage(ChatColor.GREEN + "Match started: " + kit); b.sendMessage(ChatColor.GREEN + "Match started: " + kit);
             a.setGameMode(GameMode.SURVIVAL); b.setGameMode(GameMode.SURVIVAL);
@@ -290,7 +320,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (a.getWorld() == null || !a.getWorld().equals(b.getWorld())) return;
             WorldBorder border = Bukkit.createWorldBorder();
             border.setCenter((a.getX() + b.getX()) / 2.0, (a.getZ() + b.getZ()) / 2.0);
-            double start = getConfig().getDouble("matches.border-start-size", 80.0);
+            double start = getConfig().getDouble("matches.border-start-size", 200.0);
             double end = getConfig().getDouble("matches.border-end-size", 18.0);
             long seconds = Math.max(1L, getConfig().getLong("matches.border-shrink-seconds", 90L));
             border.setSize(start);
@@ -311,7 +341,9 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             }
             stats.add(loser.getUniqueId(),"losses",1);
             active.remove(m.one); active.remove(m.two);
-            restore(winner);
+            restoreArena(m);
+            if (winner != null) restore(winner);
+            loser.setWorldBorder(null);
         }
         void handleRespawn(PlayerRespawnEvent event) {
             Player player = event.getPlayer();
@@ -331,6 +363,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         }
         void finish(Match m) {
             active.remove(m.one); active.remove(m.two);
+            restoreArena(m);
             Player a=Bukkit.getPlayer(m.one), b=Bukkit.getPlayer(m.two);
             restore(a); restore(b);
         }
@@ -341,6 +374,43 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (s != null) s.restore(p);
         }
         boolean inMatch(UUID id) { return active.containsKey(id); }
+        boolean canEdit(Player player, Location location) {
+            Match match = active.get(player.getUniqueId());
+            return match != null && arenas.contains(match.arena, location);
+        }
+        private Map<String, String> captureArena(String arena) {
+            Location one=arenas.get(arena, "region.pos1"), two=arenas.get(arena, "region.pos2");
+            Map<String, String> snapshot=new LinkedHashMap<>();
+            if(one==null || two==null || one.getWorld()==null || !one.getWorld().equals(two.getWorld())) return snapshot;
+            int minX=Math.min(one.getBlockX(),two.getBlockX()), maxX=Math.max(one.getBlockX(),two.getBlockX());
+            int minY=Math.max(one.getWorld().getMinHeight(),Math.min(one.getBlockY(),two.getBlockY()));
+            int maxY=Math.min(one.getWorld().getMaxHeight()-1,Math.max(one.getBlockY(),two.getBlockY()));
+            int minZ=Math.min(one.getBlockZ(),two.getBlockZ()), maxZ=Math.max(one.getBlockZ(),two.getBlockZ());
+            long volume=(long)(maxX-minX+1)*(maxY-minY+1)*(maxZ-minZ+1);
+            long limit=getConfig().getLong("matches.max-arena-snapshot-blocks",100000L);
+            if(volume>limit) throw new IllegalStateException("Arena region exceeds matches.max-arena-snapshot-blocks ("+limit+")");
+            World world=one.getWorld();
+            for(int x=minX;x<=maxX;x++) for(int y=minY;y<=maxY;y++) for(int z=minZ;z<=maxZ;z++) {
+                Block block=world.getBlockAt(x,y,z);
+                snapshot.put(x+","+y+","+z,block.getBlockData().getAsString());
+            }
+            return snapshot;
+        }
+        private void restoreArena(Match match) {
+            if(match.arenaSnapshot==null || match.arenaSnapshot.isEmpty()) return;
+            World world=arenas.world(match.arena);
+            if(world==null) return;
+            for(Map.Entry<String,String> entry:match.arenaSnapshot.entrySet()) {
+                String[] xyz=entry.getKey().split(",");
+                try {
+                    Block block=world.getBlockAt(Integer.parseInt(xyz[0]),Integer.parseInt(xyz[1]),Integer.parseInt(xyz[2]));
+                    block.setBlockData(Bukkit.createBlockData(entry.getValue()),false);
+                } catch(RuntimeException ex) {
+                    getLogger().warning("Could not restore arena block "+entry.getKey()+": "+ex.getMessage());
+                }
+            }
+            match.arenaSnapshot.clear();
+        }
         void forfeit(Player player) {
             Match m = active.get(player.getUniqueId());
             if (m == null) { msg(player, "You are not in a match."); return; }
@@ -486,12 +556,16 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
                 return true;
             }
             if (!s.hasPermission("mcpvp.admin") || !(s instanceof Player p)) { msg(s,"This command requires an admin in-game."); return true; }
-            if (a.length==0) { msg(s,"/arena create <name>, /arena theme <name> <theme>, /arena setspawn <name> <a|b>, /arena delete <name>, /arena list, /arena presets"); return true; }
+            if (a.length==0) { msg(s,"/arena create <name>, /arena theme <name> <theme>, /arena setspawn <name> <a|b>, /arena pos1 <name>, /arena pos2 <name>, /arena delete <name>, /arena list, /arena presets"); return true; }
             switch(a[0].toLowerCase(Locale.ROOT)) {
                 case "create" -> msg(s,a.length>1 && arenas.create(a[1]) ? "Arena created." : "Could not create arena.");
                 case "theme" -> {
                     if (a.length < 3) { msg(s, "Usage: /arena theme <name> <theme>. Themes: " + String.join(", ", ArenaThemes.THEMES)); break; }
                     msg(s, arenas.setTheme(a[1], String.join(" ", Arrays.copyOfRange(a, 2, a.length))) ? "Arena theme updated." : "Arena or theme not found.");
+                }
+                case "pos1", "pos2" -> {
+                    if (a.length < 2) { msg(s, "Usage: /arena " + a[0] + " <name>"); break; }
+                    msg(s, arenas.set(a[1], a[0].equalsIgnoreCase("pos1") ? "region.pos1" : "region.pos2", p.getLocation()) ? "Arena region corner saved." : "Arena not found.");
                 }
                 case "setspawn" -> {
                     if (a.length<3 || !(a[2].equalsIgnoreCase("a") || a[2].equalsIgnoreCase("b"))) { msg(s,"Usage: /arena setspawn <name> <a|b>"); break; }
