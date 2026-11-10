@@ -94,3 +94,12 @@ The plugin JAR is written to `build/libs/`.
 ## GitHub Releases
 
 Pushing a version tag such as `v0.7.3` triggers the release workflow. It builds the plugin and publishes a GitHub Release with generated release notes and the compiled JAR attached. Normal pushes to `main` run the build workflow.
+
+
+## Queue controls
+
+- `/leave` or `/queue leave` leaves your current queue.
+- Clicking the same kit again in `/kits` leaves that kit's queue.
+- Clicking a different kit switches your queue to the newly selected kit.
+- `/queue status` shows your current kit, queue position, and number of waiting players.
+- The kit selector displays your current queue state and position.
