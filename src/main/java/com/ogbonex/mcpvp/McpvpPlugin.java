@@ -44,7 +44,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         duels = new DuelManager();
         spectators = new SpectatorManager();
         ranks = new RankManager(this);
-        displays = new LobbyDisplayManager(this, ranks::getRank);
+        displays = new LobbyDisplayManager(this, id -> stats.get(id, "wins"), ranks::getRank);
         Bukkit.getScheduler().runTaskTimer(this, displays::refreshAll, 20L, 20L);
         loadLobby();
         getServer().getPluginManager().registerEvents(this, this);
