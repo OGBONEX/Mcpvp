@@ -10,6 +10,14 @@ This project follows Semantic Versioning:
 ## [Unreleased]
 
 ### Added
+- Interactive kit selection menu with click-to-queue behavior.
+- Match information and forfeit commands.
+- Arena deletion command.
+
+### Fixed
+- Duel default kit now falls back to the first available kit when no explicit kit is configured.
+
+### Added
 - Player-to-player duel requests with accept/deny and automatic expiry.
 - Spectator mode for active matches with return location and game mode restoration.
 - Top 10 wins leaderboard through `/stats top`.
