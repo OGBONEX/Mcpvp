@@ -8,6 +8,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.*;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -76,11 +78,21 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler public void onDeath(PlayerDeathEvent event) {
+        event.getDrops().clear();
+        event.setDroppedExp(0);
+        event.setKeepInventory(true);
+        event.setKeepLevel(true);
         matches.handleDeath(event.getEntity());
     }
     @EventHandler public void onQuit(PlayerQuitEvent event) {
         queues.leave(event.getPlayer().getUniqueId());
         matches.handleQuit(event.getPlayer());
+    }
+    @EventHandler public void onRespawn(PlayerRespawnEvent event) {
+        matches.handleRespawn(event);
+    }
+    @EventHandler public void onJoin(PlayerJoinEvent event) {
+        Bukkit.getScheduler().runTaskLater(this, () -> matches.restorePending(event.getPlayer()), 1L);
     }
 
     private final class KitManager {
@@ -121,7 +133,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             inv.setArmorContents(Arrays.copyOf(armorItems, 4));
             Object offhand = y.get("offhand");
             inv.setItemInOffHand(offhand instanceof ItemStack item ? item : null);
-            player.setHealth(20); player.setFoodLevel(20); player.setFireTicks(0);
+            player.setHealth(player.getMaxHealth()); player.setFoodLevel(20); player.setFireTicks(0);
             player.setFallDistance(0); player.setSaturation(20);
             return true;
         }
@@ -215,7 +227,18 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
                 winner.sendMessage(ChatColor.GREEN + "You won the " + m.kit + " match!");
             }
             stats.add(loser.getUniqueId(),"losses",1);
-            Bukkit.getScheduler().runTaskLater(McpvpPlugin.this, () -> finish(m), 1L);
+            active.remove(m.one); active.remove(m.two);
+            restore(winner);
+        }
+        void handleRespawn(PlayerRespawnEvent event) {
+            Player player = event.getPlayer();
+            Snapshot snapshot = snapshots.get(player.getUniqueId());
+            if (snapshot == null) return;
+            event.setRespawnLocation(snapshot.location);
+            Bukkit.getScheduler().runTaskLater(McpvpPlugin.this, () -> restore(player), 1L);
+        }
+        void restorePending(Player player) {
+            if (snapshots.containsKey(player.getUniqueId()) && !active.containsKey(player.getUniqueId())) restore(player);
         }
         void handleQuit(Player player) {
             Match m = active.get(player.getUniqueId()); if (m == null) return;
