@@ -393,6 +393,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             line.add(player.getUniqueId());
             msg(player,"Queued for " + kit + ". Waiting for an opponent...");
         }
+        int count(String kit) { return waiting.getOrDefault(clean(kit), new LinkedList<>()).size(); }
         void leave(UUID id) {
             for (LinkedList<UUID> line : waiting.values()) line.remove(id);
             waiting.values().removeIf(LinkedList::isEmpty);
@@ -446,10 +447,11 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     private final class QueueCommand implements CommandExecutor {
         public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
             if (!(s instanceof Player p)) { msg(s,"Players only."); return true; }
-            if (a.length==0) { msg(s,"/queue join <kit>, /queue leave"); return true; }
+            if (a.length==0) { msg(s,"/queue join <kit>, /queue leave, /queue status <kit>"); return true; }
             if (a[0].equalsIgnoreCase("join") && a.length>1) queues.join(p,a[1]);
             else if (a[0].equalsIgnoreCase("leave")) { queues.leave(p.getUniqueId()); msg(p,"You left the queue."); }
-            else msg(p,"Usage: /queue join <kit> or /queue leave");
+            else if (a[0].equalsIgnoreCase("status") && a.length>1) msg(p,"Players waiting for " + a[1] + ": " + queues.count(a[1]));
+            else msg(p,"Usage: /queue join <kit>, /queue leave or /queue status <kit>");
             return true;
         }
     }
@@ -537,21 +539,23 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     private final class StatsCommand implements CommandExecutor {
         public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
             if (a.length > 0 && a[0].equalsIgnoreCase("top")) {
+                String metric = a.length > 1 && a[1].equalsIgnoreCase("kills") ? "kills" : "wins";
                 List<String> lines = new ArrayList<>();
                 for (String key : stats.data.getKeys(false)) {
                     try {
                         UUID id = UUID.fromString(key);
-                        lines.add(stats.get(id, "wins") + "|" + Optional.ofNullable(Bukkit.getOfflinePlayer(id).getName()).orElse(id.toString()));
+                        lines.add(stats.get(id, metric) + "|" + Optional.ofNullable(Bukkit.getOfflinePlayer(id).getName()).orElse(id.toString()));
                     } catch (IllegalArgumentException ignored) { }
                 }
                 lines.sort((x,y) -> Integer.compare(Integer.parseInt(y.substring(0,y.indexOf('|'))), Integer.parseInt(x.substring(0,x.indexOf('|')))));
-                msg(s, "Top wins: " + (lines.isEmpty() ? "No stats yet." : String.join(", ", lines.stream().limit(10).toList())));
+                msg(s, "Top " + metric + ": " + (lines.isEmpty() ? "No stats yet." : String.join(", ", lines.stream().limit(10).toList())));
                 return true;
             }
             Player target = a.length>0 ? Bukkit.getPlayerExact(a[0]) : (s instanceof Player p ? p : null);
             if (target == null) { msg(s,"Usage: /stats [online-player|top]"); return true; }
             int wins=stats.get(target.getUniqueId(),"wins"), losses=stats.get(target.getUniqueId(),"losses");
-            msg(s,target.getName() + " - Wins: " + wins + " | Losses: " + losses + " | Matches: " + (wins+losses));
+            int kills=stats.get(target.getUniqueId(),"kills"), deaths=stats.get(target.getUniqueId(),"deaths");
+            msg(s,target.getName() + " - Wins: " + wins + " | Losses: " + losses + " | Kills: " + kills + " | Deaths: " + deaths + " | Matches: " + (wins+losses));
             return true;
         }
     }
