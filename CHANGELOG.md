@@ -10,6 +10,11 @@ This project follows Semantic Versioning:
 ## [Unreleased]
 
 ### Added
+- Queue population lookup with `/queue status <kit>`.
+- Kill and death statistics in player profiles.
+- Top kills leaderboard through `/stats top kills`.
+
+### Added
 - Interactive kit selection menu with click-to-queue behavior.
 - Match information and forfeit commands.
 - Arena deletion command.
