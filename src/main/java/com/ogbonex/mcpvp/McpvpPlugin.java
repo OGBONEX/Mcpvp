@@ -30,6 +30,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     private QueueManager queues;
     private DuelManager duels;
     private SpectatorManager spectators;
+    private LobbyDisplayManager displays;
     private Location lobby;
 
     @Override public void onEnable() {
@@ -41,6 +42,8 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         queues = new QueueManager();
         duels = new DuelManager();
         spectators = new SpectatorManager();
+        displays = new LobbyDisplayManager(this, id -> stats.get(id, "wins"));
+        Bukkit.getScheduler().runTaskTimer(this, displays::refreshAll, 20L, 20L);
         loadLobby();
         getServer().getPluginManager().registerEvents(this, this);
         bind("kit", new KitCommand());
@@ -52,6 +55,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         bind("spec", new SpectatorCommand());
         bind("kits", new KitsMenuCommand());
         bind("match", new MatchCommand());
+        bind("rank", new RankCommand());
         getLogger().info("MCPvP " + getPluginMeta().getVersion() + " enabled.");
     }
 
@@ -118,7 +122,10 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         queues.join(player, kit);
     }
     @EventHandler public void onJoin(PlayerJoinEvent event) {
-        Bukkit.getScheduler().runTaskLater(this, () -> matches.restorePending(event.getPlayer()), 1L);
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            matches.restorePending(event.getPlayer());
+            displays.refresh(event.getPlayer());
+        }, 1L);
     }
 
     private final class KitManager {
@@ -168,7 +175,25 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     private final class ArenaManager {
         private final File file = new File(getDataFolder(), "arenas.yml");
         private YamlConfiguration data;
-        ArenaManager() { data = YamlConfiguration.loadConfiguration(file); }
+        ArenaManager() {
+            data = YamlConfiguration.loadConfiguration(file);
+            File presetFile = new File(getDataFolder(), "arena-presets.yml");
+            if (!presetFile.exists()) saveResource("arena-presets.yml", false);
+            YamlConfiguration presets = YamlConfiguration.loadConfiguration(presetFile);
+            for (Map<?, ?> preset : presets.getMapList("arenas")) {
+                Object rawName = preset.get("name");
+                if (rawName == null) continue;
+                String id = clean(String.valueOf(rawName));
+                if (id.isBlank()) continue;
+                if (!data.contains(id)) {
+                    data.createSection(id);
+                    data.set(id + ".display-name", String.valueOf(rawName));
+                    data.set(id + ".theme", String.valueOf(preset.containsKey("theme") ? preset.get("theme") : "Classic"));
+                    data.set(id + ".preset", true);
+                }
+            }
+            save();
+        }
         void save() { try { data.save(file); } catch (IOException ex) { getLogger().warning(ex.getMessage()); } }
         boolean create(String name) {
             String id = clean(name);
@@ -428,8 +453,12 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
 
     private final class ArenaCommand implements CommandExecutor {
         public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
+            if (a.length > 0 && a[0].equalsIgnoreCase("presets")) {
+                msg(s, "Arena presets: " + arenas.names().size() + " available. Set both spawn points to activate a map.");
+                return true;
+            }
             if (!s.hasPermission("mcpvp.admin") || !(s instanceof Player p)) { msg(s,"This command requires an admin in-game."); return true; }
-            if (a.length==0) { msg(s,"/arena create <name>, /arena setspawn <name> <a|b>, /arena delete <name>, /arena list"); return true; }
+            if (a.length==0) { msg(s,"/arena create <name>, /arena setspawn <name> <a|b>, /arena delete <name>, /arena list, /arena presets"); return true; }
             switch(a[0].toLowerCase(Locale.ROOT)) {
                 case "create" -> msg(s,a.length>1 && arenas.create(a[1]) ? "Arena created." : "Could not create arena.");
                 case "setspawn" -> {
@@ -532,6 +561,16 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
                 if (target == null) msg(player, "That player is not online.");
                 else spectators.spectate(player, target);
             }
+            return true;
+        }
+    }
+
+    private final class RankCommand implements CommandExecutor {
+        public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+            Player target = args.length > 0 ? Bukkit.getPlayerExact(args[0]) : (sender instanceof Player p ? p : null);
+            if (target == null) { msg(sender, "Usage: /rank [online-player]"); return true; }
+            int wins = stats.get(target.getUniqueId(), "wins");
+            msg(sender, target.getName() + " is " + displays.rankName(wins) + " (" + wins + " wins).");
             return true;
         }
     }
