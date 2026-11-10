@@ -25,6 +25,8 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     private StatsManager stats;
     private MatchManager matches;
     private QueueManager queues;
+    private DuelManager duels;
+    private SpectatorManager spectators;
     private Location lobby;
 
     @Override public void onEnable() {
@@ -34,6 +36,8 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         stats = new StatsManager();
         matches = new MatchManager();
         queues = new QueueManager();
+        duels = new DuelManager();
+        spectators = new SpectatorManager();
         loadLobby();
         getServer().getPluginManager().registerEvents(this, this);
         bind("kit", new KitCommand());
@@ -41,6 +45,8 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         bind("queue", new QueueCommand());
         bind("mcpvp", new MainCommand());
         bind("stats", new StatsCommand());
+        bind("duel", new DuelCommand());
+        bind("spec", new SpectatorCommand());
         getLogger().info("MCPvP " + getPluginMeta().getVersion() + " enabled.");
     }
 
@@ -78,14 +84,18 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     }
 
     @EventHandler public void onDeath(PlayerDeathEvent event) {
-        event.getDrops().clear();
-        event.setDroppedExp(0);
-        event.setKeepInventory(true);
-        event.setKeepLevel(true);
-        matches.handleDeath(event.getEntity());
+        if (matches.inMatch(event.getEntity().getUniqueId())) {
+            event.getDrops().clear();
+            event.setDroppedExp(0);
+            event.setKeepInventory(true);
+            event.setKeepLevel(true);
+            matches.handleDeath(event.getEntity());
+        }
     }
     @EventHandler public void onQuit(PlayerQuitEvent event) {
         queues.leave(event.getPlayer().getUniqueId());
+        duels.clearFor(event.getPlayer().getUniqueId());
+        spectators.restore(event.getPlayer());
         matches.handleQuit(event.getPlayer());
     }
     @EventHandler public void onRespawn(PlayerRespawnEvent event) {
@@ -257,7 +267,79 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (s != null) s.restore(p);
         }
         boolean inMatch(UUID id) { return active.containsKey(id); }
+        Player opponent(Player player) {
+            Match m = active.get(player.getUniqueId());
+            return m == null ? null : Bukkit.getPlayer(m.opponent(player.getUniqueId()));
+        }
         void shutdown() { for (UUID id : new ArrayList<>(snapshots.keySet())) restore(Bukkit.getPlayer(id)); active.clear(); }
+    }
+
+    private final class DuelManager {
+        private final Map<UUID, UUID> requests = new HashMap<>();
+        private final Map<UUID, BukkitTask> expiry = new HashMap<>();
+        void challenge(Player challenger, Player target) {
+            if (challenger.equals(target)) { msg(challenger, "You cannot challenge yourself."); return; }
+            if (matches.inMatch(challenger.getUniqueId()) || matches.inMatch(target.getUniqueId())) {
+                msg(challenger, "Both players must be outside a match."); return;
+            }
+            requests.put(target.getUniqueId(), challenger.getUniqueId());
+            BukkitTask old = expiry.remove(target.getUniqueId());
+            if (old != null) old.cancel();
+            expiry.put(target.getUniqueId(), Bukkit.getScheduler().runTaskLater(McpvpPlugin.this, () -> {
+                requests.remove(target.getUniqueId()); expiry.remove(target.getUniqueId());
+            }, 20L * 30));
+            msg(challenger, "Duel request sent to " + target.getName() + ".");
+            msg(target, challenger.getName() + " challenged you. Use /duel accept or /duel deny (expires in 30 seconds).");
+        }
+        void accept(Player target) {
+            UUID challengerId = requests.remove(target.getUniqueId());
+            BukkitTask task = expiry.remove(target.getUniqueId());
+            if (task != null) task.cancel();
+            Player challenger = challengerId == null ? null : Bukkit.getPlayer(challengerId);
+            if (challenger == null || !challenger.isOnline()) { msg(target, "That duel request has expired."); return; }
+            if (matches.inMatch(challengerId) || matches.inMatch(target.getUniqueId())) {
+                msg(target, "A player is already in a match."); return;
+            }
+            String kit = getConfig().getString("duels.default-kit", kits.names().stream().findFirst().orElse(""));
+            if (kit.isBlank() || !kits.exists(kit)) { msg(target, "No valid default duel kit is configured."); return; }
+            matches.start(challenger, target, kit);
+        }
+        void deny(Player target) {
+            UUID id = requests.remove(target.getUniqueId());
+            BukkitTask task = expiry.remove(target.getUniqueId());
+            if (task != null) task.cancel();
+            Player challenger = id == null ? null : Bukkit.getPlayer(id);
+            msg(target, "Duel request denied.");
+            if (challenger != null) msg(challenger, target.getName() + " denied your duel request.");
+        }
+        void clearFor(UUID id) {
+            requests.remove(id);
+            BukkitTask task = expiry.remove(id);
+            if (task != null) task.cancel();
+            requests.entrySet().removeIf(e -> e.getValue().equals(id));
+        }
+    }
+
+    private final class SpectatorManager {
+        private final Map<UUID, GameMode> previousModes = new HashMap<>();
+        private final Map<UUID, Location> previousLocations = new HashMap<>();
+        void spectate(Player spectator, Player target) {
+            if (spectator.equals(target) || !matches.inMatch(target.getUniqueId())) {
+                msg(spectator, "That player is not currently in a match."); return;
+            }
+            if (matches.inMatch(spectator.getUniqueId())) { msg(spectator, "You cannot spectate while in a match."); return; }
+            previousModes.putIfAbsent(spectator.getUniqueId(), spectator.getGameMode());
+            previousLocations.putIfAbsent(spectator.getUniqueId(), spectator.getLocation().clone());
+            spectator.setGameMode(GameMode.SPECTATOR);
+            spectator.teleport(target.getLocation());
+            msg(spectator, "Spectating " + target.getName() + ". Use /spec leave to return.");
+        }
+        void restore(Player player) {
+            GameMode mode = previousModes.remove(player.getUniqueId());
+            Location location = previousLocations.remove(player.getUniqueId());
+            if (mode != null) player.setGameMode(mode);
+            if (location != null && player.isOnline()) player.teleport(location);
+        }
     }
 
     private final class QueueManager {
@@ -352,10 +434,53 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    private final class DuelCommand implements CommandExecutor {
+        public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
+            if (!(s instanceof Player player)) { msg(s, "Players only."); return true; }
+            if (a.length == 0) { msg(player, "/duel <player>, /duel accept, /duel deny"); return true; }
+            switch (a[0].toLowerCase(Locale.ROOT)) {
+                case "accept" -> duels.accept(player);
+                case "deny" -> duels.deny(player);
+                default -> {
+                    Player target = Bukkit.getPlayerExact(a[0]);
+                    if (target == null) msg(player, "That player is not online.");
+                    else duels.challenge(player, target);
+                }
+            }
+            return true;
+        }
+    }
+
+    private final class SpectatorCommand implements CommandExecutor {
+        public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
+            if (!(s instanceof Player player)) { msg(s, "Players only."); return true; }
+            if (a.length == 0) { msg(player, "/spec <player> or /spec leave"); return true; }
+            if (a[0].equalsIgnoreCase("leave")) spectators.restore(player);
+            else {
+                Player target = Bukkit.getPlayerExact(a[0]);
+                if (target == null) msg(player, "That player is not online.");
+                else spectators.spectate(player, target);
+            }
+            return true;
+        }
+    }
+
     private final class StatsCommand implements CommandExecutor {
         public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
+            if (a.length > 0 && a[0].equalsIgnoreCase("top")) {
+                List<String> lines = new ArrayList<>();
+                for (String key : stats.data.getKeys(false)) {
+                    try {
+                        UUID id = UUID.fromString(key);
+                        lines.add(stats.get(id, "wins") + "|" + Optional.ofNullable(Bukkit.getOfflinePlayer(id).getName()).orElse(id.toString()));
+                    } catch (IllegalArgumentException ignored) { }
+                }
+                lines.sort((x,y) -> Integer.compare(Integer.parseInt(y.substring(0,y.indexOf('|'))), Integer.parseInt(x.substring(0,x.indexOf('|')))));
+                msg(s, "Top wins: " + (lines.isEmpty() ? "No stats yet." : String.join(", ", lines.stream().limit(10).toList())));
+                return true;
+            }
             Player target = a.length>0 ? Bukkit.getPlayerExact(a[0]) : (s instanceof Player p ? p : null);
-            if (target == null) { msg(s,"Usage: /stats [online-player]"); return true; }
+            if (target == null) { msg(s,"Usage: /stats [online-player|top]"); return true; }
             int wins=stats.get(target.getUniqueId(),"wins"), losses=stats.get(target.getUniqueId(),"losses");
             msg(s,target.getName() + " - Wins: " + wins + " | Losses: " + losses + " | Matches: " + (wins+losses));
             return true;
