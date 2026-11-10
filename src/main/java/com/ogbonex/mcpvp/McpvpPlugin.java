@@ -43,7 +43,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         queues = new QueueManager();
         duels = new DuelManager();
         spectators = new SpectatorManager();
-        ranks = new RankManager();
+        ranks = new RankManager(this);
         displays = new LobbyDisplayManager(this, ranks::getRank);
         Bukkit.getScheduler().runTaskTimer(this, displays::refreshAll, 20L, 20L);
         loadLobby();
@@ -486,9 +486,13 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
                 return true;
             }
             if (!s.hasPermission("mcpvp.admin") || !(s instanceof Player p)) { msg(s,"This command requires an admin in-game."); return true; }
-            if (a.length==0) { msg(s,"/arena create <name>, /arena setspawn <name> <a|b>, /arena delete <name>, /arena list, /arena presets"); return true; }
+            if (a.length==0) { msg(s,"/arena create <name>, /arena theme <name> <theme>, /arena setspawn <name> <a|b>, /arena delete <name>, /arena list, /arena presets"); return true; }
             switch(a[0].toLowerCase(Locale.ROOT)) {
                 case "create" -> msg(s,a.length>1 && arenas.create(a[1]) ? "Arena created." : "Could not create arena.");
+                case "theme" -> {
+                    if (a.length < 3) { msg(s, "Usage: /arena theme <name> <theme>. Themes: " + String.join(", ", ArenaThemes.THEMES)); break; }
+                    msg(s, arenas.setTheme(a[1], String.join(" ", Arrays.copyOfRange(a, 2, a.length))) ? "Arena theme updated." : "Arena or theme not found.");
+                }
                 case "setspawn" -> {
                     if (a.length<3 || !(a[2].equalsIgnoreCase("a") || a[2].equalsIgnoreCase("b"))) { msg(s,"Usage: /arena setspawn <name> <a|b>"); break; }
                     msg(s,arenas.set(a[1],a[2].equalsIgnoreCase("a")?"spawn-a":"spawn-b",p.getLocation()) ? "Arena spawn saved." : "Arena not found.");
