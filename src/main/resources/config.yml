@@ -1,0 +1,8 @@
+# MCPvP main configuration
+# More settings will be added as systems are implemented.
+
+settings:
+  debug: false
+
+updates:
+  check-for-updates: true

@@ -1,0 +1,6 @@
+name: MCPvP
+version: '${version}'
+main: com.ogbonex.mcpvp.McpvpPlugin
+api-version: '1.21.11'
+authors: [OGBONEX]
+description: A classic-inspired MCPvP minigame plugin.
