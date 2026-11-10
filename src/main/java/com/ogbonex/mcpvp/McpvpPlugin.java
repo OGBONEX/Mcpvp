@@ -36,6 +36,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     private SpectatorManager spectators;
     private LobbyDisplayManager displays;
     private RankManager ranks;
+    private PvpProgressionManager progression;
     private Location lobby;
 
     @Override public void onEnable() {
@@ -48,6 +49,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         duels = new DuelManager();
         spectators = new SpectatorManager();
         ranks = new RankManager(this);
+        progression = new PvpProgressionManager(this);
         displays = new LobbyDisplayManager(this, id -> stats.get(id, "wins"), ranks::getRank);
         Bukkit.getScheduler().runTaskTimer(this, displays::refreshAll, 20L, 20L);
         loadLobby();
@@ -62,6 +64,10 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         bind("menu", new MainMenuCommand());
         bind("match", new MatchCommand());
         bind("rank", new RankCommand());
+        bind("elo", new ProgressionCommand());
+        bind("streak", new ProgressionCommand());
+        bind("history", new ProgressionCommand());
+        bind("rematch", new RematchCommand());
         getLogger().info("MCPvP " + getPluginMeta().getVersion() + " enabled.");
     }
 
@@ -387,9 +393,11 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             Player winner = Bukkit.getPlayer(m.opponent(loser.getUniqueId()));
             if (winner != null) {
                 stats.add(winner.getUniqueId(),"wins",1);
+                progression.recordResult(winner, loser, m.kit);
                 winner.sendMessage(ChatColor.GREEN + "You won the " + m.kit + " match!");
             }
             stats.add(loser.getUniqueId(),"losses",1);
+            progression.recordLoss(loser, winner, m.kit);
             active.remove(m.one); active.remove(m.two);
             restoreArena(m);
             arenas.release(m.arena);
@@ -409,8 +417,8 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         void handleQuit(Player player) {
             Match m = active.get(player.getUniqueId()); if (m == null) return;
             Player winner = Bukkit.getPlayer(m.opponent(player.getUniqueId()));
-            if (winner != null) { stats.add(winner.getUniqueId(),"wins",1); winner.sendMessage(ChatColor.GREEN + "Opponent left. You win!"); }
-            stats.add(player.getUniqueId(),"losses",1); finish(m);
+            if (winner != null) { stats.add(winner.getUniqueId(),"wins",1); progression.recordResult(winner, player, m.kit); winner.sendMessage(ChatColor.GREEN + "Opponent left. You win!"); }
+            stats.add(player.getUniqueId(),"losses",1); progression.recordLoss(player, winner, m.kit); finish(m);
         }
         void finish(Match m) {
             active.remove(m.one); active.remove(m.two);
@@ -466,12 +474,32 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (m == null) { msg(player, "You are not in a match."); return; }
             Player winner = Bukkit.getPlayer(m.opponent(player.getUniqueId()));
             stats.add(player.getUniqueId(), "losses", 1);
+            progression.recordLoss(player, winner, m.kit);
             if (winner != null) {
                 stats.add(winner.getUniqueId(), "wins", 1);
+                progression.recordResult(winner, player, m.kit);
                 msg(winner, "Your opponent forfeited. You win!");
             }
             msg(player, "You forfeited the match.");
             finish(m);
+        }
+        boolean rematch(Player player) {
+            PvpProgressionManager.RematchRequest request = progression.rematch(player.getUniqueId());
+            if (request == null) { msg(player, "No recent opponent is available for a rematch."); return false; }
+            Player opponent = Bukkit.getPlayer(request.opponent());
+            if (opponent == null || !opponent.isOnline()) { msg(player, "Your previous opponent is not online."); return false; }
+            if (inMatch(player.getUniqueId()) || inMatch(opponent.getUniqueId())) { msg(player, "Both players must be outside a match."); return false; }
+            msg(opponent, player.getName() + " requested a rematch. They can accept with /rematch accept.");
+            progression.pendingRematch(opponent.getUniqueId(), player.getUniqueId(), request.kit());
+            msg(player, "Rematch request sent to " + opponent.getName() + ".");
+            return true;
+        }
+        boolean acceptRematch(Player player) {
+            PvpProgressionManager.RematchRequest request = progression.takePendingRematch(player.getUniqueId());
+            if (request == null) { msg(player, "You have no pending rematch."); return false; }
+            Player challenger = Bukkit.getPlayer(request.opponent());
+            if (challenger == null || !challenger.isOnline() || inMatch(challenger.getUniqueId()) || inMatch(player.getUniqueId())) { msg(player, "The rematch is no longer available."); return false; }
+            return start(challenger, player, request.kit());
         }
         Player opponent(Player player) {
             Match m = active.get(player.getUniqueId());
@@ -746,6 +774,26 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             button(menu, 14, Material.GOLD_INGOT, "Top Players", "leaderboard", "View the wins leaderboard.");
             button(menu, 16, Material.MAP, "Arena List", "arenas", "View available arena records.");
             player.openInventory(menu);
+            return true;
+        }
+    }
+
+    private final class RematchCommand implements CommandExecutor {
+        public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+            if (!(sender instanceof Player player)) { msg(sender, "Players only."); return true; }
+            if (args.length > 0 && args[0].equalsIgnoreCase("accept")) matches.acceptRematch(player);
+            else matches.rematch(player);
+            return true;
+        }
+    }
+
+    private final class ProgressionCommand implements CommandExecutor {
+        public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+            if (!(sender instanceof Player player)) { msg(sender, "Players only."); return true; }
+            String sub = command.getName().toLowerCase(Locale.ROOT);
+            if (sub.equals("elo")) msg(player, "Your ELO: " + progression.elo(player.getUniqueId()) + " | Tier: " + progression.tier(player.getUniqueId()));
+            else if (sub.equals("streak")) msg(player, "Current killstreak: " + progression.streak(player.getUniqueId()) + " | Best: " + progression.bestStreak(player.getUniqueId()));
+            else msg(player, "Recent matches: " + progression.history(player.getUniqueId()));
             return true;
         }
     }
