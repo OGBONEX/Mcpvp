@@ -15,11 +15,11 @@ commands:
     description: Manage MCPvP arenas
     usage: /arena
   queue:
-    description: Join or leave kit matchmaking
-    usage: /queue
+    description: Join, leave or inspect kit matchmaking
+    usage: /queue <join|leave|status>
   stats:
     description: View player match statistics and leaderboard
-    usage: /stats [player|top]
+    usage: /stats [player|top [wins|kills]]
   duel:
     description: Challenge another player to a duel
     usage: /duel <player|accept|deny>
