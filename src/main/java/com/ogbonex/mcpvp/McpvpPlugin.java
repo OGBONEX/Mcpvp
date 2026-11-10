@@ -187,6 +187,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     private final class ArenaManager {
         private final File file = new File(getDataFolder(), "arenas.yml");
         private YamlConfiguration data;
+        private final Set<String> inUse = new HashSet<>();
         ArenaManager() {
             data = YamlConfiguration.loadConfiguration(file);
             File presetFile = new File(getDataFolder(), "arena-presets.yml");
@@ -253,9 +254,13 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             return data.getKeys(false).stream().sorted().toList();
         }
         String firstReady() {
-            for (String name : names()) if (get(name, "spawn-a") != null && get(name, "spawn-b") != null) return name;
+            for (String name : names()) {
+                if (!inUse.contains(name) && get(name, "spawn-a") != null && get(name, "spawn-b") != null && hasRegion(name)) return name;
+            }
             return null;
         }
+        boolean reserve(String name) { return inUse.add(clean(name)); }
+        void release(String name) { inUse.remove(clean(name)); }
     }
 
     private final class StatsManager {
@@ -300,14 +305,20 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (sa == null || sb == null) return false;
             snapshots.put(a.getUniqueId(), new Snapshot(a)); snapshots.put(b.getUniqueId(), new Snapshot(b));
             Match match = new Match(a,b,kit,arena); active.put(match.one,match); active.put(match.two,match);
-            if (!arenas.hasRegion(arena)) {
+            if (!arenas.reserve(arena)) {
                 active.remove(match.one); active.remove(match.two);
                 snapshots.remove(match.one); snapshots.remove(match.two);
-                msg(a, "This arena needs /arena pos1 and /arena pos2 configured before it can be used.");
-                msg(b, "This arena is missing its editable/reset region.");
                 return false;
             }
-            match.arenaSnapshot = captureArena(arena);
+            try {
+                match.arenaSnapshot = captureArena(arena);
+            } catch (IllegalStateException ex) {
+                arenas.release(arena);
+                active.remove(match.one); active.remove(match.two);
+                snapshots.remove(match.one); snapshots.remove(match.two);
+                msg(a, ex.getMessage()); msg(b, ex.getMessage());
+                return false;
+            }
             a.teleport(sa); b.teleport(sb); kits.apply(a,kit); kits.apply(b,kit);
             a.sendMessage(ChatColor.GREEN + "Match started: " + kit); b.sendMessage(ChatColor.GREEN + "Match started: " + kit);
             a.setGameMode(GameMode.SURVIVAL); b.setGameMode(GameMode.SURVIVAL);
