@@ -15,3 +15,31 @@ lobby:
   z: 0.0
   yaw: 0.0
   pitch: 0.0
+tab:
+  header: "&6&lMCPvP"
+  subheader: "&7Classic PvP Network"
+  footer: "&eOnline: &f%online% &8| &7MCPvP"
+scoreboard:
+  enabled: true
+  title: "&6&lMCPvP"
+  queue-label: "Use /kits"
+ranks:
+  tiers:
+    - name: "Rookie"
+      min-wins: 0
+      prefix: "&7[Rookie]"
+    - name: "Fighter"
+      min-wins: 10
+      prefix: "&a[Fighter]"
+    - name: "Warrior"
+      min-wins: 25
+      prefix: "&e[Warrior]"
+    - name: "Elite"
+      min-wins: 50
+      prefix: "&b[Elite]"
+    - name: "Champion"
+      min-wins: 100
+      prefix: "&6[Champion]"
+    - name: "Legend"
+      min-wins: 250
+      prefix: "&d[Legend]"
