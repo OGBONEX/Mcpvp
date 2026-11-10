@@ -26,6 +26,12 @@ commands:
   spec:
     description: Spectate an active match
     usage: /spec <player|leave>
+  kits:
+    description: Open the kit queue selector
+    usage: /kits
+  match:
+    description: View or forfeit your current match
+    usage: /match <info|forfeit>
 permissions:
   mcpvp.admin:
     description: Allows administration of MCPvP
