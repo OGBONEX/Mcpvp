@@ -6,6 +6,9 @@ settings:
     match-mode: same-kit
   matches:
     restore-inventory-after-match: true
+    border-start-size: 80.0
+    border-end-size: 18.0
+    border-shrink-seconds: 90
 duels:
   default-kit: ""
 lobby:
@@ -23,23 +26,27 @@ scoreboard:
   enabled: true
   title: "&6&lMCPvP"
   queue-label: "Use /kits"
-ranks:
-  tiers:
-    - name: "Rookie"
-      min-wins: 0
-      prefix: "&7[Rookie]"
-    - name: "Fighter"
-      min-wins: 10
-      prefix: "&a[Fighter]"
-    - name: "Warrior"
-      min-wins: 25
-      prefix: "&e[Warrior]"
-    - name: "Elite"
-      min-wins: 50
-      prefix: "&b[Elite]"
-    - name: "Champion"
-      min-wins: 100
-      prefix: "&6[Champion]"
-    - name: "Legend"
-      min-wins: 250
-      prefix: "&d[Legend]"
+rank-prefixes:
+  owner: "&4[Owner]"
+  co-owner: "&c[Co-owner]"
+  admin: "&c[Admin]"
+  sr-mod: "&9[SR mod]"
+  mod: "&2[Mod]"
+  creator: "&d[Creator]"
+  booster: "&6[Booster]"
+  player: "&7[Player]"
+arena-themes:
+  - Classic
+  - Desert
+  - Nether
+  - Snow
+  - Sky
+  - Nature
+  - Stone
+  - Water
+  - Medieval
+  - Industrial
+  - Fantasy
+  - Town
+  - End
+  - Modern
