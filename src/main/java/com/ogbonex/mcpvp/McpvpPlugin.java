@@ -154,12 +154,6 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
                 getLogger().warning("Could not save kit " + id + ": " + ex.getMessage()); return false;
             }
         }
-        boolean setTheme(String name, String theme) {
-            String id = clean(name);
-            if (!data.contains(id) || !ArenaThemes.isValid(theme)) return false;
-            data.set(id + ".theme", theme); save(); return true;
-        }
-        String theme(String name) { return data.getString(clean(name) + ".theme", "Classic"); }
         boolean delete(String name) { return exists(name) && file(name).delete(); }
         boolean apply(Player player, String name) {
             if (!exists(name)) return false;
@@ -208,6 +202,12 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (id.isBlank() || data.contains(id)) return false;
             data.createSection(id); data.set(id + ".display-name", name); data.set(id + ".theme", "Classic"); save(); return true;
         }
+        boolean setTheme(String name, String theme) {
+            String id = clean(name);
+            if (!data.contains(id) || !ArenaThemes.isValid(theme)) return false;
+            data.set(id + ".theme", theme); save(); return true;
+        }
+        String theme(String name) { return data.getString(clean(name) + ".theme", "Classic"); }
         boolean set(String name, String key, Location loc) {
             if (!data.contains(clean(name)) || loc.getWorld() == null) return false;
             String base = clean(name) + "." + key;
