@@ -17,6 +17,10 @@ commands:
   queue:
     description: Join, leave or inspect kit matchmaking
     usage: /queue <join|leave|status>
+  leave:
+    description: Leave your current matchmaking queue
+    usage: /leave
+    aliases: [qleave]
   stats:
     description: View player match statistics and leaderboard
     usage: /stats [player|top [wins|kills]]
