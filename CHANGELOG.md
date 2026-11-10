@@ -10,6 +10,12 @@ This project follows Semantic Versioning:
 ## [Unreleased]
 
 ### Added
+- Player-to-player duel requests with accept/deny and automatic expiry.
+- Spectator mode for active matches with return location and game mode restoration.
+- Top 10 wins leaderboard through `/stats top`.
+- Lobby deaths retain vanilla drop behavior; match deaths use match restoration.
+
+### Added
 - Inventory-based kit creation, listing, deletion and kit giving.
 - Arena creation and configurable player spawn points.
 - Same-kit 1v1 matchmaking queues.
