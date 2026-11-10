@@ -4,7 +4,7 @@ A classic-inspired PvP minigame plugin for **Paper 1.21.11**, built with **Java 
 
 ## Current development status
 
-Development version: `0.7.0-SNAPSHOT`
+Development version: `0.7.1-SNAPSHOT`
 
 Implemented:
 - Inventory-based kit creation, listing, deletion and giving.
@@ -14,7 +14,8 @@ Implemented:
 - Configurable tab list and sidebar scoreboard.
 - Persistent role ranks: Owner, Co-owner, Admin, SR mod, Mod, Creator, Booster and Player.
 - Rank management with `/rank set`, `/rank add` and `/rank remove`.
-- Shrinking per-player match world border to bring opponents toward the center of the arena.
+- Per-match shrinking world border starting at 200 blocks.
+- Arena block placement and breaking inside configured arena regions, with block palette regeneration after each match.
 - Arena theme assignment with `/arena theme <name> <theme>`.
 - GitHub Actions build and tag-triggered GitHub Releases with the plugin JAR attached.
 
@@ -46,21 +47,26 @@ Themes label the intended visual style of the arena; they do not automatically b
 
 1. Build or import the arena map.
 2. Set the theme with `/arena theme <name> <theme>`.
-3. Stand at player A's spawn and run `/arena setspawn <name> a`.
-4. Stand at player B's spawn and run `/arena setspawn <name> b`.
-5. Create kits with `/kit create <name>`.
-6. Players can queue with `/queue join <name>`.
+3. Set the first and second arena region corners with `/arena pos1 <name>` and `/arena pos2 <name>` while standing at opposite corners of the complete arena area.
+4. Stand at player A's spawn and run `/arena setspawn <name> a`.
+5. Stand at player B's spawn and run `/arena setspawn <name> b`.
+6. Create kits with `/kit create <name>`.
+7. Players can queue with `/queue join <name>`.
 
-Only arenas with both spawn points configured are eligible for matchmaking.
+Only arenas with both spawn points and both region corners configured are eligible for matchmaking. An arena is reserved while a match is active, preventing two matches from modifying the same map simultaneously.
 
 ## Match border
 
-The match border is applied individually to both match participants. Defaults in `config.yml`:
-- Starting diameter: 80 blocks
-- Final diameter: 18 blocks
-- Shrink duration: 90 seconds
+The match border is applied to both match participants. Defaults in `config.yml`:
+- Starting diameter: 200 blocks
+- Final diameter: 20 blocks
+- Shrink duration: 300 seconds (5 minutes)
 
 Adjust `matches.border-start-size`, `matches.border-end-size` and `matches.border-shrink-seconds` to tune it.
+
+## Arena building and regeneration
+
+Use `/arena pos1 <name>` and `/arena pos2 <name>` at opposite corners to define the full cuboid arena region. Players can place and break blocks only inside that region while in a match. At match end, the plugin restores the region's original block data captured immediately before the match. Configure `matches.max-arena-snapshot-blocks` to set the maximum region volume (default 100,000 blocks). Use normal block-based arena builds; inventories and other complex tile-entity contents are not included in this initial snapshot system.
 
 ## Main commands
 
