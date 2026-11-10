@@ -1,38 +1,30 @@
 # Changelog
 
-## 0.7.5-SNAPSHOT
+## v0.7.5
 - Replaced the player-facing `/kits` command with `/queue`, which opens the kit-selection GUI.
 - Removed the `/kits` command registration; kit administration through `/kit create`, `/kit delete` and `/kit icon` remains available.
 - Updated the main menu to label the kit selector as Queue.
+- Set the displayed and build version to MCPvP v0.7.5.
 
-## 0.7.4-SNAPSHOT
+## v0.7.4
 - Added `/leave` (alias `/qleave`) to leave matchmaking.
-- Clicking the currently queued kit in `/kits` now toggles queue exit.
+- Clicking the currently queued kit in the queue GUI now toggles queue exit.
 - Selecting another kit switches queues.
 - Added personal queue position and current queue details to `/queue status`.
 - Improved kit selector lore with live queue state and position.
 
-All notable MCPvP changes are documented here.
-
-## [0.7.1] - Unreleased
-
-### Added
-- Arena region selection using `/arena pos1 <name>` and `/arena pos2 <name>`.
-- Block placement and breaking inside match arena regions.
-- Automatic arena block-data regeneration after matches.
-- Arena reservation prevents concurrent matches from editing the same arena.
-- Configurable arena snapshot size limit.
-- Match world border starts at 200 blocks and shrinks to 20 blocks over 5 minutes by default.
-
-### Fixed
-- Arena selection now requires both spawn points and both region corners.
-- Match completion restores the arena after death, forfeit, and disconnect.
-
-### Versioning
-- Patch release sequence: 0.7.0 → 0.7.1 → 0.7.2. Minor version 0.8.0 is not used for this patch update.
-
-
-## 0.7.3-SNAPSHOT
+## v0.7.3
 - Added a main navigation GUI at `/menu` and `/mcpvp menu`.
 - Added kit-specific GUI icons, automatic icon selection, configurable icon materials and queue-count lore.
-- Refreshed plugin description and README branding to MCPvP — The Arena.
+
+## v0.7.1
+- Added arena region selection using `/arena pos1 <name>` and `/arena pos2 <name>`.
+- Added block placement and breaking inside match arena regions.
+- Added automatic arena block-data regeneration after matches.
+- Added arena reservation to prevent concurrent matches from editing the same arena.
+- Added a configurable arena snapshot size limit.
+- Added a match world border that starts at 200 blocks and shrinks to 20 blocks over 5 minutes by default.
+- Fixed arena selection to require both spawn points and both region corners.
+- Fixed match completion restoration after death, forfeit and disconnect.
+
+Patch version sequence: 0.7.0 → 0.7.1 → 0.7.2 → 0.7.3 → 0.7.4 → 0.7.5.
