@@ -52,7 +52,6 @@ public final class PvpProgressionManager {
         recent.put(win, new RematchRequest(lose, kit));
         recent.put(lose, new RematchRequest(win, kit));
         addHistory(win, "W vs " + loser.getName() + " (" + kit + ") +" + winnerDelta);
-        addHistory(lose, "L vs " + winner.getName() + " (" + kit + ") " + loserDelta);
         save();
         winner.sendMessage(ChatColor.AQUA + "ELO +" + winnerDelta + " (" + (oldWinner + winnerDelta) + ") | " + tier(win));
         loser.sendMessage(ChatColor.RED + "ELO " + loserDelta + " (" + Math.max(0, oldLoser + loserDelta) + ")");
