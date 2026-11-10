@@ -76,7 +76,7 @@ Use `/arena pos1 <name>` and `/arena pos2 <name>` at opposite corners to define 
 | `/kit list` | List kits |
 | `/arena create <name>` | Create an arena record |
 | `/arena theme <name> <theme>` | Assign an arena theme |
-| `/arena setspawn <name> <a|b>` | Set arena spawns |
+| `/arena setspawn <name> <a|b>` | Set arena spawns |\n| `/arena pos1 <name>` | Set first corner of editable/reset region |\n| `/arena pos2 <name>` | Set opposite corner of editable/reset region |
 | `/arena pos1 <name>` | Set first arena reset-region corner |
 | `/arena pos2 <name>` | Set second arena reset-region corner |
 | `/arena presets` | Show available arena preset slots |
@@ -103,7 +103,7 @@ Requirements: Java 21 and Gradle 8.14.2.
 gradle clean build
 ```
 
-The plugin JAR is written to `build/libs/`.
+The plugin JAR is written to `build/libs/`.\n\nArena matches allow block placement and breaking inside the configured region. The plugin snapshots the region before a match and restores its saved block states after a win, loss, forfeit or disconnect. Arena region size is limited by `matches.max-arena-snapshot-blocks` to avoid excessive memory use. The snapshot is held in memory for the duration of a match; a server crash during a match can interrupt restoration.
 
 ## GitHub Releases
 
