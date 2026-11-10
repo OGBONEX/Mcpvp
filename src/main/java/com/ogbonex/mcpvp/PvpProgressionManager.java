@@ -40,10 +40,10 @@ public final class PvpProgressionManager {
     public void recordResult(Player winner, Player loser, String kit) {
         UUID win = winner.getUniqueId(), lose = loser.getUniqueId();
         int oldWinner = elo(win), oldLoser = elo(lose);
-        int expectedWinner = (int)Math.round(1.0 / (1.0 + Math.pow(10.0, (oldLoser - oldWinner) / 400.0)));
-        int expectedLoser = (int)Math.round(1.0 / (1.0 + Math.pow(10.0, (oldWinner - oldLoser) / 400.0)));
+        double expectedWinner = 1.0 / (1.0 + Math.pow(10.0, (oldLoser - oldWinner) / 400.0));
+        double expectedLoser = 1.0 / (1.0 + Math.pow(10.0, (oldWinner - oldLoser) / 400.0));
         int winnerDelta = Math.max(1, (int)Math.round(32 * (1.0 - expectedWinner)));
-        int loserDelta = Math.max(1, (int)Math.round(32 * (0.0 - expectedLoser)));
+        int loserDelta = (int)Math.round(32 * (0.0 - expectedLoser));
         data.set(win + ".elo", oldWinner + winnerDelta);
         data.set(lose + ".elo", Math.max(0, oldLoser + loserDelta));
         int current = streak(win) + 1;
