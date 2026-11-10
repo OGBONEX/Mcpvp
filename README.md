@@ -4,7 +4,7 @@ A classic-inspired PvP minigame plugin for **Paper 1.21.11**, built with **Java 
 
 ## Current development status
 
-Development version: `0.4.0-SNAPSHOT`
+Development version: `0.5.0-SNAPSHOT`
 
 Implemented in this milestone:
 - Create, list, delete and give inventory-based kits.
@@ -17,6 +17,8 @@ Implemented in this milestone:
 - Interactive kit selector GUI that queues players when they click a kit.
 - Match status and forfeit commands.
 - Arena deletion command.
+- Queue status lookup by kit.
+- Player kill/death statistics and top-kills leaderboard.
 - Lobby location and reload commands.
 - YAML configuration and data files.
 
@@ -34,8 +36,10 @@ Implemented in this milestone:
 | `/arena list` | List arenas | `mcpvp.admin` |
 | `/queue join <kit>` | Queue for a same-kit match | Everyone |
 | `/queue leave` | Leave matchmaking | Everyone |
+| `/queue status <kit>` | See how many players are waiting for a kit | Everyone |
 | `/stats [player]` | View wins and losses | Everyone |
 | `/stats top` | Show top 10 by wins | Everyone |
+| `/stats top kills` | Show top 10 by kills | Everyone |
 | `/duel <player>` | Send a duel request | Everyone |
 | `/duel accept` | Accept a duel request | Everyone |
 | `/duel deny` | Deny a duel request | Everyone |
