@@ -27,7 +27,7 @@ jobs:
           gradle-version: '8.14.2'
 
       - name: Build plugin
-        run: gradle clean build --no-daemon
+        run: gradle -PreleaseVersion="${GITHUB_REF_NAME#v}" clean build --no-daemon
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
