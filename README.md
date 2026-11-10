@@ -77,6 +77,8 @@ Use `/arena pos1 <name>` and `/arena pos2 <name>` at opposite corners to define 
 | `/arena create <name>` | Create an arena record |
 | `/arena theme <name> <theme>` | Assign an arena theme |
 | `/arena setspawn <name> <a|b>` | Set arena spawns |
+| `/arena pos1 <name>` | Set first arena reset-region corner |
+| `/arena pos2 <name>` | Set second arena reset-region corner |
 | `/arena presets` | Show available arena preset slots |
 | `/rank <player>` | View a player's rank |
 | `/rank set <player> <rank>` | Set a player's rank |
@@ -105,4 +107,4 @@ The plugin JAR is written to `build/libs/`.
 
 ## GitHub Releases
 
-Pushing a version tag such as `v0.7.0` triggers the release workflow. It builds the plugin and publishes a GitHub Release with generated release notes and the compiled JAR attached. Releases are published from tags; normal pushes to `main` only run the build workflow.
+Pushing a version tag such as `v0.7.1` triggers the release workflow. It builds the plugin and publishes a GitHub Release with generated release notes and the compiled JAR attached. Releases are published from tags; normal pushes to `main` only run the build workflow.
