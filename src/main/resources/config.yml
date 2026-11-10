@@ -1,8 +1,15 @@
-# MCPvP main configuration
-# More settings will be added as systems are implemented.
-
+# MCPvP configuration
 settings:
   debug: false
-
-updates:
-  check-for-updates: true
+  queue:
+    enabled: true
+    match-mode: same-kit
+  matches:
+    restore-inventory-after-match: true
+lobby:
+  world: ""
+  x: 0.0
+  y: 80.0
+  z: 0.0
+  yaw: 0.0
+  pitch: 0.0

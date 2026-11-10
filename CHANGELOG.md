@@ -1,6 +1,6 @@
 # Changelog
 
-All notable MCPvP changes will be documented in this file.
+All notable MCPvP changes are documented here.
 
 This project follows Semantic Versioning:
 - PATCH (1.0.x): backwards-compatible bug fixes.
@@ -10,10 +10,15 @@ This project follows Semantic Versioning:
 ## [Unreleased]
 
 ### Added
-- Initial project structure for Paper 1.21.11 and Java 21.
-- Gradle build configuration.
-- Basic plugin entry point and default configuration.
+- Inventory-based kit creation, listing, deletion and kit giving.
+- Arena creation and configurable player spawn points.
+- Same-kit 1v1 matchmaking queues.
+- Match start and end handling for player deaths and disconnects.
+- Player inventory, armor, offhand, location and basic status restoration after matches.
+- Persistent player win/loss statistics.
+- Lobby setup and return commands.
+- Command permissions and updated project documentation.
 
-### Notes
-- This is a development build, not the stable 1.0.0 release.
-- The first stable release will be published as 1.0.0 after its planned features are implemented and tested.
+### Development
+- Version advanced to 0.2.0-SNAPSHOT.
+- Gameplay systems remain under active development; this is not yet the 1.0.0 stable release.
