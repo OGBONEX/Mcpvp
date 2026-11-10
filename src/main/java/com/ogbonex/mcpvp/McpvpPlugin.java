@@ -120,6 +120,14 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             matches.handleDeath(event.getEntity());
         }
     }
+    @EventHandler public void onOpenWorldPvpDeath(PlayerDeathEvent event) {
+        Player victim = event.getEntity();
+        if (matches.inMatch(victim.getUniqueId())) return;
+        progression.recordDeath(victim);
+        Player killer = victim.getKiller();
+        if (killer != null && !killer.equals(victim)) progression.recordKill(killer);
+    }
+
     @EventHandler public void onQuit(PlayerQuitEvent event) {
         queues.leave(event.getPlayer().getUniqueId());
         duels.clearFor(event.getPlayer().getUniqueId());
