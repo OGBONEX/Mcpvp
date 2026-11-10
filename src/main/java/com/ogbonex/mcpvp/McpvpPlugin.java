@@ -153,7 +153,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             inv.clear();
             List<?> contents = y.getList("contents", List.of());
             ItemStack[] items = contents.toArray(new ItemStack[0]);
-            inv.setContents(Arrays.copyOf(items, 36));
+            inv.setContents(items);
             List<?> armor = y.getList("armor", List.of());
             ItemStack[] armorItems = armor.toArray(new ItemStack[0]);
             inv.setArmorContents(Arrays.copyOf(armorItems, 4));
@@ -218,17 +218,17 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         private final Map<UUID, Snapshot> snapshots = new HashMap<>();
         private final class Snapshot {
             final ItemStack[] contents, armor; final ItemStack offhand;
-            final Location location; final int food; final double health; final float exp; final int level;
+            final Location location; final int food; final double health; final float exp; final int level; final GameMode gameMode; final boolean allowFlight;
             Snapshot(Player p) {
                 contents = p.getInventory().getContents().clone(); armor = p.getInventory().getArmorContents().clone();
                 offhand = p.getInventory().getItemInOffHand(); location = p.getLocation().clone();
-                food = p.getFoodLevel(); health = p.getHealth(); exp = p.getExp(); level = p.getLevel();
+                food = p.getFoodLevel(); health = p.getHealth(); exp = p.getExp(); level = p.getLevel(); gameMode = p.getGameMode(); allowFlight = p.getAllowFlight();
             }
             void restore(Player p) {
                 p.getInventory().clear(); p.getInventory().setContents(contents); p.getInventory().setArmorContents(armor);
                 p.getInventory().setItemInOffHand(offhand); p.setFoodLevel(food);
                 p.setHealth(Math.max(1, Math.min(health, p.getMaxHealth()))); p.setExp(exp); p.setLevel(level);
-                p.setFireTicks(0); p.setFallDistance(0); p.teleport(location);
+                p.setFireTicks(0); p.setFallDistance(0); p.setAllowFlight(allowFlight); p.setGameMode(gameMode); p.teleport(location);
             }
         }
         private final class Match {
