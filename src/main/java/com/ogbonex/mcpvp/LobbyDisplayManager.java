@@ -14,10 +14,12 @@ import java.util.function.ToIntFunction;
 final class LobbyDisplayManager {
     private final JavaPlugin plugin;
     private final java.util.function.Function<UUID, String> ranks;
+    private final java.util.function.ToIntFunction<UUID> wins;
     private final Map<UUID, Scoreboard> boards = new HashMap<>();
 
-    LobbyDisplayManager(JavaPlugin plugin, java.util.function.Function<UUID, String> ranks) {
+    LobbyDisplayManager(JavaPlugin plugin, java.util.function.ToIntFunction<UUID> wins, java.util.function.Function<UUID, String> ranks) {
         this.plugin = plugin;
+        this.wins = wins;
         this.ranks = ranks;
     }
 
@@ -32,7 +34,7 @@ final class LobbyDisplayManager {
     }
 
     void refresh(Player player) {
-        int count = plugin.getConfig().getInt("display-wins-placeholder", 0);
+        int count = wins.applyAsInt(player.getUniqueId());
         String rank = ranks.apply(player.getUniqueId());
         String prefix = plugin.getConfig().getString("rank-prefixes." + rank.toLowerCase(java.util.Locale.ROOT).replace(" ", "-").replace("_", "-"), "&7[" + rank + "]");
         player.setPlayerListName(color(prefix) + ChatColor.RESET + " " + player.getName());
