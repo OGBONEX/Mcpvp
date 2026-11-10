@@ -12,7 +12,7 @@ commands:
     description: Manage and view kits
     usage: /kit
   arena:
-    description: Manage MCPvP arenas
+    description: Manage MCPvP arenas and themes
     usage: /arena
   queue:
     description: Join, leave or inspect kit matchmaking
@@ -33,10 +33,13 @@ commands:
     description: View or forfeit your current match
     usage: /match <info|forfeit>
   rank:
-    description: View a player's current MCPvP rank
-    usage: /rank [player]
+    description: View or manage player ranks
+    usage: /rank <player|set|add|remove>
     aliases: [ranks]
 permissions:
   mcpvp.admin:
     description: Allows administration of MCPvP
+    default: op
+  mcpvp.rank.manage:
+    description: Allows assigning and removing player ranks
     default: op
