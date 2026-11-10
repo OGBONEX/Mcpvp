@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.5-SNAPSHOT
+- Replaced the player-facing `/kits` command with `/queue`, which opens the kit-selection GUI.
+- Removed the `/kits` command registration; kit administration through `/kit create`, `/kit delete` and `/kit icon` remains available.
+- Updated the main menu to label the kit selector as Queue.
+
 ## 0.7.4-SNAPSHOT
 - Added `/leave` (alias `/qleave`) to leave matchmaking.
 - Clicking the currently queued kit in `/kits` now toggles queue exit.
