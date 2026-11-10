@@ -31,6 +31,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     private DuelManager duels;
     private SpectatorManager spectators;
     private LobbyDisplayManager displays;
+    private RankManager ranks;
     private Location lobby;
 
     @Override public void onEnable() {
@@ -42,7 +43,8 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         queues = new QueueManager();
         duels = new DuelManager();
         spectators = new SpectatorManager();
-        displays = new LobbyDisplayManager(this, id -> stats.get(id, "wins"));
+        ranks = new RankManager();
+        displays = new LobbyDisplayManager(this, ranks::getRank);
         Bukkit.getScheduler().runTaskTimer(this, displays::refreshAll, 20L, 20L);
         loadLobby();
         getServer().getPluginManager().registerEvents(this, this);
@@ -152,6 +154,12 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
                 getLogger().warning("Could not save kit " + id + ": " + ex.getMessage()); return false;
             }
         }
+        boolean setTheme(String name, String theme) {
+            String id = clean(name);
+            if (!data.contains(id) || !ArenaThemes.isValid(theme)) return false;
+            data.set(id + ".theme", theme); save(); return true;
+        }
+        String theme(String name) { return data.getString(clean(name) + ".theme", "Classic"); }
         boolean delete(String name) { return exists(name) && file(name).delete(); }
         boolean apply(Player player, String name) {
             if (!exists(name)) return false;
@@ -198,7 +206,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         boolean create(String name) {
             String id = clean(name);
             if (id.isBlank() || data.contains(id)) return false;
-            data.createSection(id); save(); return true;
+            data.createSection(id); data.set(id + ".display-name", name); data.set(id + ".theme", "Classic"); save(); return true;
         }
         boolean set(String name, String key, Location loc) {
             if (!data.contains(clean(name)) || loc.getWorld() == null) return false;
@@ -257,7 +265,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             }
         }
         private final class Match {
-            final UUID one, two; final String kit, arena;
+            final UUID one, two; final String kit, arena; WorldBorder border;
             Match(Player a, Player b, String kit, String arena) {
                 one=a.getUniqueId(); two=b.getUniqueId(); this.kit=kit; this.arena=arena;
             }
@@ -273,7 +281,26 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             a.teleport(sa); b.teleport(sb); kits.apply(a,kit); kits.apply(b,kit);
             a.sendMessage(ChatColor.GREEN + "Match started: " + kit); b.sendMessage(ChatColor.GREEN + "Match started: " + kit);
             a.setGameMode(GameMode.SURVIVAL); b.setGameMode(GameMode.SURVIVAL);
+            applyBorder(match, sa, sb);
+            String theme = arenas.theme(arena);
+            a.sendMessage(ChatColor.GRAY + "Arena theme: " + theme); b.sendMessage(ChatColor.GRAY + "Arena theme: " + theme);
             return true;
+        }
+        private void applyBorder(Match match, Location a, Location b) {
+            if (a.getWorld() == null || !a.getWorld().equals(b.getWorld())) return;
+            WorldBorder border = Bukkit.createWorldBorder();
+            border.setCenter((a.getX() + b.getX()) / 2.0, (a.getZ() + b.getZ()) / 2.0);
+            double start = getConfig().getDouble("matches.border-start-size", 80.0);
+            double end = getConfig().getDouble("matches.border-end-size", 18.0);
+            long seconds = Math.max(1L, getConfig().getLong("matches.border-shrink-seconds", 90L));
+            border.setSize(start);
+            border.setDamageAmount(0.0);
+            border.setWarningDistance(3);
+            border.setSize(end, seconds);
+            match.border = border;
+            Player one = Bukkit.getPlayer(match.one), two = Bukkit.getPlayer(match.two);
+            if (one != null) one.setWorldBorder(border);
+            if (two != null) two.setWorldBorder(border);
         }
         void handleDeath(Player loser) {
             Match m = active.get(loser.getUniqueId()); if (m == null) return;
@@ -310,6 +337,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         void restore(Player p) {
             if (p == null) return;
             Snapshot s=snapshots.remove(p.getUniqueId());
+            try { p.setWorldBorder(null); } catch (Throwable ignored) { }
             if (s != null) s.restore(p);
         }
         boolean inMatch(UUID id) { return active.containsKey(id); }
@@ -567,10 +595,38 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
 
     private final class RankCommand implements CommandExecutor {
         public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-            Player target = args.length > 0 ? Bukkit.getPlayerExact(args[0]) : (sender instanceof Player p ? p : null);
-            if (target == null) { msg(sender, "Usage: /rank [online-player]"); return true; }
-            int wins = stats.get(target.getUniqueId(), "wins");
-            msg(sender, target.getName() + " is " + displays.rankName(wins) + " (" + wins + " wins).");
+            if (args.length == 0) {
+                if (sender instanceof Player player) msg(sender, player.getName() + " rank: " + ranks.getRank(player.getUniqueId()));
+                else msg(sender, "Usage: /rank <player> or /rank <set|add|remove> <player> [rank]");
+                return true;
+            }
+            String action = args[0].toLowerCase(Locale.ROOT);
+            if (action.equals("set") || action.equals("add")) {
+                if (!sender.hasPermission("mcpvp.rank.manage") && !sender.hasPermission("mcpvp.admin")) { msg(sender, "You do not have permission to manage ranks."); return true; }
+                if (args.length < 3) { msg(sender, "Usage: /rank " + action + " <player> <rank>"); return true; }
+                OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+                String requested = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
+                String rank = ranks.resolve(requested);
+                if (rank == null) { msg(sender, "Unknown rank. Valid ranks: " + String.join(", ", RankManager.RANKS)); return true; }
+                ranks.setRank(target.getUniqueId(), rank);
+                Player online = target.getPlayer();
+                if (online != null) displays.refresh(online);
+                msg(sender, "Set " + target.getName() + " rank to " + rank + ".");
+                return true;
+            }
+            if (action.equals("remove")) {
+                if (!sender.hasPermission("mcpvp.rank.manage") && !sender.hasPermission("mcpvp.admin")) { msg(sender, "You do not have permission to manage ranks."); return true; }
+                if (args.length != 2) { msg(sender, "Usage: /rank remove <player>"); return true; }
+                OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+                ranks.removeRank(target.getUniqueId());
+                Player online = target.getPlayer();
+                if (online != null) displays.refresh(online);
+                msg(sender, "Removed custom rank from " + target.getName() + ". They are now Player.");
+                return true;
+            }
+            OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
+            if (!target.hasPlayedBefore() && target.getName() == null) { msg(sender, "Player not found."); return true; }
+            msg(sender, target.getName() + " rank: " + ranks.getRank(target.getUniqueId()));
             return true;
         }
     }
