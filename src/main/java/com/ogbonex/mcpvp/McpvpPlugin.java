@@ -59,7 +59,6 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         bind("stats", new StatsCommand());
         bind("duel", new DuelCommand());
         bind("spec", new SpectatorCommand());
-        bind("kits", new KitsMenuCommand());
         bind("menu", new MainMenuCommand());
         bind("match", new MatchCommand());
         bind("rank", new RankCommand());
@@ -659,7 +658,11 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     private final class QueueCommand implements CommandExecutor {
         public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
             if (!(s instanceof Player p)) { msg(s,"Players only."); return true; }
-            if (a.length==0 || a[0].equalsIgnoreCase("status")) {
+            if (a.length == 0) {
+                new KitsMenuCommand().onCommand(p, c, "queue", new String[0]);
+                return true;
+            }
+            if (a[0].equalsIgnoreCase("status")) {
                 if (a.length > 1) {
                     msg(p,"Players waiting for " + a[1] + ": " + queues.count(a[1]));
                 } else {
@@ -685,7 +688,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
 
     private final class MainCommand implements CommandExecutor {
         public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
-            if (a.length==0) { msg(s,"MCPvP commands: /menu, /kits, /kit, /arena, /queue, /stats, /mcpvp lobby"); return true; }
+            if (a.length==0) { msg(s,"MCPvP commands: /menu, /queue, /kit, /arena, /stats, /mcpvp lobby"); return true; }
             if (a[0].equalsIgnoreCase("menu")) { if (s instanceof Player p) new MainMenuCommand().onCommand(p, c, l, new String[0]); else msg(s, "Players only."); }
             else if (a[0].equalsIgnoreCase("setlobby") && s instanceof Player p && s.hasPermission("mcpvp.admin")) {
                 saveLobby(p.getLocation()); msg(s,"Lobby location saved.");
@@ -738,7 +741,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
             if (!(sender instanceof Player player)) { msg(sender, "Players only."); return true; }
             Inventory menu = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "MCPvP Menu");
-            button(menu, 10, Material.IRON_SWORD, "Kit Selector", "kits", "Browse kits and join matchmaking.");
+            button(menu, 10, Material.IRON_SWORD, "Queue", "kits", "Browse kits and join matchmaking with /queue.");
             button(menu, 12, Material.PLAYER_HEAD, "My Statistics", "stats", "View your wins, losses and match record.");
             button(menu, 14, Material.GOLD_INGOT, "Top Players", "leaderboard", "View the wins leaderboard.");
             button(menu, 16, Material.MAP, "Arena List", "arenas", "View available arena records.");
