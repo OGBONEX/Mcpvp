@@ -1,10 +1,10 @@
-# MCPvP — The Arena
+# MCPvP v0.7.5
 
-**The Arena** is a competitive Minecraft PvP toolkit for **Paper 1.21.11**, built with **Java 21** and **Gradle**. Create custom kits, send players into fast matchmaking, challenge rivals, and run block-editable arenas that reset between matches.
+A competitive Minecraft PvP system for **Paper 1.21.11**, built with **Java 21** and **Gradle**. Create custom kits, send players into fast matchmaking, challenge rivals, and run block-editable arenas that reset between matches.
 
-## Current development status
+## Current version
 
-Development version: `0.7.5-SNAPSHOT`
+**MCPvP v0.7.5**
 
 Implemented:
 - Main navigation GUI via `/menu` or `/mcpvp menu`.
@@ -20,11 +20,11 @@ Implemented:
 - Per-match shrinking world border starting at 200 blocks.
 - Arena block placement and breaking inside configured regions, with arena restoration after matches.
 - Arena theme assignment with `/arena theme <name> <theme>`.
-- GitHub Actions builds and tag-triggered GitHub Releases with the plugin JAR attached.
+- GitHub Actions builds and tag-triggered GitHub Releases with the JAR attached.
 
 ## GUI navigation
 
-- `/menu` — opens the main MCPvP menu.
+- `/menu` — opens the main menu.
 - `/queue` — opens the kit selector. Each kit displays its configured icon, queue count and your position. Clicking a kit joins its queue; clicking the same kit again leaves.
 - Main menu buttons provide shortcuts to the kit selector, personal statistics, wins leaderboard and arena list.
 
@@ -64,7 +64,7 @@ Only arenas with both spawn points and both region corners configured are eligib
 
 ### Arena restoration
 
-Players can place and break blocks only inside the configured region during a match. The plugin captures the arena before the match and restores saved block states when the match ends, including after a death, forfeit or disconnect. Snapshots are held in memory, so a server crash during a match can interrupt restoration. Region volume is limited by `matches.max-arena-snapshot-blocks`.
+Players can place and break blocks only inside the configured region during a match. The system captures the arena before the match and restores saved block states when the match ends, including after a death, forfeit or disconnect. Snapshots are held in memory, so a server crash during a match can interrupt restoration. Region volume is limited by `matches.max-arena-snapshot-blocks`.
 
 ### Match border
 
@@ -92,12 +92,11 @@ Requirements: Java 21 and Gradle 8.14.2.
 gradle clean build
 ```
 
-The plugin JAR is written to `build/libs/`.
+The JAR is written to `build/libs/`.
 
 ## GitHub Releases
 
-Pushing a version tag such as `v0.7.5` triggers the release workflow. It builds the plugin and publishes a GitHub Release with generated release notes and the compiled JAR attached. Normal pushes to `main` run the build workflow.
-
+Pushing a version tag such as `v0.7.5` triggers the release workflow. It builds the project and publishes a GitHub Release with generated release notes and the compiled JAR attached. Normal pushes to `main` run the build workflow.
 
 ## Queue controls
 
@@ -106,4 +105,4 @@ Pushing a version tag such as `v0.7.5` triggers the release workflow. It builds 
 - Clicking the same kit again in the queue GUI leaves that kit's queue.
 - Clicking a different kit switches your queue to the newly selected kit.
 - `/queue status` shows your current kit, queue position, and number of waiting players.
-- `/kits` is no longer registered; use `/queue` instead.
+- `/kits` is not registered; use `/queue` instead.
