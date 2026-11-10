@@ -2,20 +2,19 @@
 
 All notable MCPvP changes are documented here.
 
-## [Unreleased]
+## [0.7.1] - Unreleased
 
 ### Added
-- Persistent role ranks: Owner, Co-owner, Admin, SR mod, Mod, Creator, Booster and Player.
-- `/rank set`, `/rank add` and `/rank remove` administration commands.
-- Configurable rank prefixes in the tab list and scoreboard.
-- Arena theme assignment for Classic, Desert, Nether, Snow, Sky, Nature, Stone, Water, Medieval, Industrial, Fantasy, Town, End and Modern.
-- Shrinking per-player match world border.
-- Tag-triggered GitHub Release workflow that attaches the built plugin JAR.
+- Arena region selection using `/arena pos1 <name>` and `/arena pos2 <name>`.
+- Block placement and breaking inside match arena regions.
+- Automatic arena block-data regeneration after matches.
+- Arena reservation prevents concurrent matches from editing the same arena.
+- Configurable arena snapshot size limit.
+- Match world border starts at 200 blocks and shrinks to 20 blocks over 5 minutes by default.
 
-### Changed
-- Removed win-threshold ranks; player ranks are now assigned and persisted by UUID.
-- Advanced development version to 0.7.0-SNAPSHOT.
+### Fixed
+- Arena selection now requires both spawn points and both region corners.
+- Match completion restores the arena after death, forfeit, and disconnect.
 
-### Notes
-- Arena themes describe the intended block palette/style. They do not auto-generate or repaint physical maps.
-- Existing arena records and spawn locations are retained. Existing win-based rank tiers are no longer used.
+### Versioning
+- Patch release sequence: 0.7.0 → 0.7.1 → 0.7.2. Minor version 0.8.0 is not used for this patch update.
