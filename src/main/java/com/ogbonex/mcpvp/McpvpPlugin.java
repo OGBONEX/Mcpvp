@@ -10,6 +10,7 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -295,7 +296,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             }
         }
         private final class Match {
-            final UUID one, two; final String kit, arena; WorldBorder border; Map<String,String> arenaSnapshot;
+            final UUID one, two; final String kit, arena; WorldBorder border; Map<String,BlockState> arenaSnapshot;
             Match(Player a, Player b, String kit, String arena) {
                 one=a.getUniqueId(); two=b.getUniqueId(); this.kit=kit; this.arena=arena;
             }
@@ -356,6 +357,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             stats.add(loser.getUniqueId(),"losses",1);
             active.remove(m.one); active.remove(m.two);
             restoreArena(m);
+            arenas.release(m.arena);
             if (winner != null) restore(winner);
             loser.setWorldBorder(null);
         }
@@ -378,6 +380,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         void finish(Match m) {
             active.remove(m.one); active.remove(m.two);
             restoreArena(m);
+            arenas.release(m.arena);
             Player a=Bukkit.getPlayer(m.one), b=Bukkit.getPlayer(m.two);
             restore(a); restore(b);
         }
@@ -392,9 +395,9 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             Match match = active.get(player.getUniqueId());
             return match != null && arenas.contains(match.arena, location);
         }
-        private Map<String, String> captureArena(String arena) {
+        private Map<String, BlockState> captureArena(String arena) {
             Location one=arenas.get(arena, "region.pos1"), two=arenas.get(arena, "region.pos2");
-            Map<String, String> snapshot=new LinkedHashMap<>();
+            Map<String, BlockState> snapshot=new LinkedHashMap<>();
             if(one==null || two==null || one.getWorld()==null || !one.getWorld().equals(two.getWorld())) return snapshot;
             int minX=Math.min(one.getBlockX(),two.getBlockX()), maxX=Math.max(one.getBlockX(),two.getBlockX());
             int minY=Math.max(one.getWorld().getMinHeight(),Math.min(one.getBlockY(),two.getBlockY()));
@@ -406,7 +409,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             World world=one.getWorld();
             for(int x=minX;x<=maxX;x++) for(int y=minY;y<=maxY;y++) for(int z=minZ;z<=maxZ;z++) {
                 Block block=world.getBlockAt(x,y,z);
-                snapshot.put(x+","+y+","+z,block.getBlockData().getAsString());
+                snapshot.put(x+","+y+","+z,block.getState());
             }
             return snapshot;
         }
@@ -414,11 +417,9 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if(match.arenaSnapshot==null || match.arenaSnapshot.isEmpty()) return;
             World world=arenas.world(match.arena);
             if(world==null) return;
-            for(Map.Entry<String,String> entry:match.arenaSnapshot.entrySet()) {
-                String[] xyz=entry.getKey().split(",");
+            for(Map.Entry<String,BlockState> entry:match.arenaSnapshot.entrySet()) {
                 try {
-                    Block block=world.getBlockAt(Integer.parseInt(xyz[0]),Integer.parseInt(xyz[1]),Integer.parseInt(xyz[2]));
-                    block.setBlockData(Bukkit.createBlockData(entry.getValue()),false);
+                    entry.getValue().update(true, false);
                 } catch(RuntimeException ex) {
                     getLogger().warning("Could not restore arena block "+entry.getKey()+": "+ex.getMessage());
                 }
@@ -442,7 +443,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             return m == null ? null : Bukkit.getPlayer(m.opponent(player.getUniqueId()));
         }
         void shutdown() {
-            for (Match match : new HashSet<>(active.values())) restoreArena(match);
+            for (Match match : new HashSet<>(active.values())) { restoreArena(match); arenas.release(match.arena); }
             for (UUID id : new ArrayList<>(snapshots.keySet())) restore(Bukkit.getPlayer(id));
             active.clear();
         }
