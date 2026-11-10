@@ -1,10 +1,10 @@
-# MCPvP v0.7.5
+# MCPvP v0.7.6
 
 A competitive Minecraft PvP system for **Paper 1.21.11**, built with **Java 21** and **Gradle**. Create custom kits, send players into fast matchmaking, challenge rivals, and run block-editable arenas that reset between matches.
 
 ## Current version
 
-**MCPvP v0.7.5**
+**MCPvP v0.7.6**
 
 Implemented:
 - Main navigation GUI via `/menu` or `/mcpvp menu`.
@@ -20,7 +20,7 @@ Implemented:
 - Per-match shrinking world border starting at 200 blocks.
 - Arena block placement and breaking inside configured regions, with arena restoration after matches.
 - Arena theme assignment with `/arena theme <name> <theme>`.
-- GitHub Actions builds and tag-triggered GitHub Releases with the JAR attached.
+- GitHub Actions builds and tag-triggered GitHub Releases with the JAR attached.\n- Persistent ELO ratings with Bronze, Silver, Gold, Diamond and Master tiers.\n- ELO updates after completed 1v1 matches.\n- Persistent killstreak and best-streak tracking.\n- Recent match history via `/history`.\n- Rematch requests with `/rematch` and `/rematch accept`.\n- `/elo` and `/streak` player commands.
 
 ## GUI navigation
 
@@ -49,7 +49,7 @@ Implemented:
 - `/spec <player>` / `/spec leave` — spectate or leave spectator mode.
 - `/match info` — view your opponent.
 - `/match forfeit` — forfeit your current match.
-- `/stats [player]` — view match statistics.
+- `/stats [player]` — view match statistics.\n- `/elo` — view your rating and tier.\n- `/streak` — view current and best killstreak.\n- `/history` — view your five most recent match results.\n- `/rematch` — request a rematch with your last opponent; `/rematch accept` accepts a request.
 - `/stats top` or `/stats top kills` — view leaderboards.
 
 ## Arena setup
