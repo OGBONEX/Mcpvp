@@ -60,6 +60,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         bind("duel", new DuelCommand());
         bind("spec", new SpectatorCommand());
         bind("kits", new KitsMenuCommand());
+        bind("menu", new MainMenuCommand());
         bind("match", new MatchCommand());
         bind("rank", new RankCommand());
         getLogger().info("MCPvP " + getPluginMeta().getVersion() + " enabled.");
@@ -125,8 +126,21 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     }
     @EventHandler public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (!ChatColor.stripColor(event.getView().getTitle()).equals("MCPvP Kits")) return;
+        String title = ChatColor.stripColor(event.getView().getTitle());
+        if (title.equals("MCPvP Menu")) {
+            event.setCancelled(true);
+            ItemStack selected = event.getCurrentItem();
+            if (selected == null || !selected.hasItemMeta()) return;
+            String action = selected.getItemMeta().getPersistentDataContainer().get(new org.bukkit.NamespacedKey(this, "menu-action"), org.bukkit.persistence.PersistentDataType.STRING);
+            if ("kits".equals(action)) new KitsMenuCommand().onCommand(player, null, "kits", new String[0]);
+            else if ("stats".equals(action)) { player.closeInventory(); new StatsCommand().onCommand(player, null, "stats", new String[0]); }
+            else if ("leaderboard".equals(action)) { player.closeInventory(); new StatsCommand().onCommand(player, null, "stats", new String[]{"top"}); }
+            else if ("arenas".equals(action)) { player.closeInventory(); msg(player, "Arena presets and maps: " + String.join(", ", arenas.names())); }
+            return;
+        }
+        if (!title.equals("MCPvP Kits")) return;
         event.setCancelled(true);
+        if (event.getClickedInventory() == null || !event.getClickedInventory().equals(event.getView().getTopInventory())) return;
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta()) return;
         String kit = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
@@ -157,6 +171,8 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             YamlConfiguration y = new YamlConfiguration();
             PlayerInventory inv = player.getInventory();
             y.set("display-name", name);
+            Material icon = Arrays.stream(inv.getContents()).filter(Objects::nonNull).filter(item -> item.getType() != Material.AIR).map(ItemStack::getType).findFirst().orElse(Material.IRON_SWORD);
+            y.set("icon", icon.name());
             y.set("contents", Arrays.asList(inv.getContents()));
             y.set("armor", Arrays.asList(inv.getArmorContents()));
             y.set("offhand", inv.getItemInOffHand());
@@ -166,6 +182,20 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             }
         }
         boolean delete(String name) { return exists(name) && file(name).delete(); }
+        Material icon(String name) {
+            if (!exists(name)) return Material.IRON_SWORD;
+            String value = YamlConfiguration.loadConfiguration(file(name)).getString("icon", "IRON_SWORD");
+            Material material = Material.matchMaterial(value == null ? "IRON_SWORD" : value);
+            return material == null || !material.isItem() ? Material.IRON_SWORD : material;
+        }
+        boolean setIcon(String name, String materialName) {
+            if (!exists(name)) return false;
+            Material material = Material.matchMaterial(materialName);
+            if (material == null || !material.isItem() || material == Material.AIR) return false;
+            YamlConfiguration y = YamlConfiguration.loadConfiguration(file(name));
+            y.set("icon", material.name());
+            try { y.save(file(name)); return true; } catch (IOException ex) { getLogger().warning("Could not update kit icon: " + ex.getMessage()); return false; }
+        }
         boolean apply(Player player, String name) {
             if (!exists(name)) return false;
             YamlConfiguration y = YamlConfiguration.loadConfiguration(file(name));
@@ -545,7 +575,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
 
     private final class KitCommand implements CommandExecutor {
         public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
-            if (a.length==0) { msg(s,"/kit create <name>, /kit list, /kit delete <name>, /kit give <player> <name>"); return true; }
+            if (a.length==0) { msg(s,"/kit create <name>, /kit list, /kit icon <name> <material>, /kit delete <name>, /kit give <player> <name>"); return true; }
             switch(a[0].toLowerCase(Locale.ROOT)) {
                 case "create" -> {
                     if (!(s instanceof Player p) || !s.hasPermission("mcpvp.admin")) { msg(s,"You need to be an admin in-game to create kits."); return true; }
@@ -553,6 +583,10 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
                     msg(s,kits.create(p,a[1]) ? "Created kit " + a[1] + " from your inventory." : "Could not create kit. It may already exist.");
                 }
                 case "list" -> msg(s,"Kits: " + (kits.names().isEmpty() ? "none" : String.join(", ",kits.names())));
+                case "icon" -> {
+                    if (!s.hasPermission("mcpvp.admin") || a.length < 3) { msg(s, "Usage: /kit icon <name> <material> (admin)"); break; }
+                    msg(s, kits.setIcon(a[1], a[2]) ? "Updated kit icon." : "Kit or item material not found.");
+                }
                 case "delete" -> {
                     if (!s.hasPermission("mcpvp.admin") || a.length<2) { msg(s,"Usage: /kit delete <name> (admin)"); return true; }
                     msg(s,kits.delete(a[1]) ? "Deleted kit." : "Kit not found.");
@@ -612,8 +646,9 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
 
     private final class MainCommand implements CommandExecutor {
         public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
-            if (a.length==0) { msg(s,"MCPvP commands: /kit, /arena, /queue, /stats, /mcpvp lobby"); return true; }
-            if (a[0].equalsIgnoreCase("setlobby") && s instanceof Player p && s.hasPermission("mcpvp.admin")) {
+            if (a.length==0) { msg(s,"MCPvP commands: /menu, /kits, /kit, /arena, /queue, /stats, /mcpvp lobby"); return true; }
+            if (a[0].equalsIgnoreCase("menu")) { if (s instanceof Player p) new MainMenuCommand().onCommand(p, c, l, new String[0]); else msg(s, "Players only."); }
+            else if (a[0].equalsIgnoreCase("setlobby") && s instanceof Player p && s.hasPermission("mcpvp.admin")) {
                 saveLobby(p.getLocation()); msg(s,"Lobby location saved.");
             } else if (a[0].equalsIgnoreCase("lobby") && s instanceof Player p) {
                 if (lobby == null) msg(s,"Lobby is not configured.");
@@ -632,13 +667,37 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (names.isEmpty()) { msg(player, "No kits have been created yet."); return true; }
             Inventory menu = Bukkit.createInventory(null, Math.min(54, ((names.size() + 8) / 9) * 9), ChatColor.DARK_AQUA + "MCPvP Kits");
             for (String name : names.stream().limit(54).toList()) {
-                ItemStack icon = new ItemStack(Material.IRON_SWORD);
+                ItemStack icon = new ItemStack(kits.icon(name));
                 ItemMeta meta = icon.getItemMeta();
                 meta.setDisplayName(ChatColor.GREEN + name);
-                meta.setLore(List.of(ChatColor.GRAY + "Click to queue for this kit"));
+                meta.setLore(List.of(ChatColor.GRAY + "Click to queue for this kit", ChatColor.DARK_GRAY + "Waiting: " + queues.count(name), ChatColor.DARK_GRAY + "Icon: " + kits.icon(name).name()));
                 icon.setItemMeta(meta);
                 menu.addItem(icon);
             }
+            player.openInventory(menu);
+            return true;
+        }
+    }
+
+    private final class MainMenuCommand implements CommandExecutor {
+        private void button(Inventory inventory, int slot, Material material, String name, String action, String... lore) {
+            ItemStack item = new ItemStack(material);
+            ItemMeta meta = item.getItemMeta();
+            meta.setDisplayName(ChatColor.GOLD + name);
+            List<String> lines = new ArrayList<>();
+            for (String line : lore) lines.add(ChatColor.GRAY + line);
+            meta.setLore(lines);
+            meta.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(McpvpPlugin.this, "menu-action"), org.bukkit.persistence.PersistentDataType.STRING, action);
+            item.setItemMeta(meta);
+            inventory.setItem(slot, item);
+        }
+        public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+            if (!(sender instanceof Player player)) { msg(sender, "Players only."); return true; }
+            Inventory menu = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "MCPvP Menu");
+            button(menu, 10, Material.IRON_SWORD, "Kit Selector", "kits", "Browse kits and join matchmaking.");
+            button(menu, 12, Material.PLAYER_HEAD, "My Statistics", "stats", "View your wins, losses and match record.");
+            button(menu, 14, Material.GOLD_INGOT, "Top Players", "leaderboard", "View the wins leaderboard.");
+            button(menu, 16, Material.MAP, "Arena List", "arenas", "View available arena records.");
             player.openInventory(menu);
             return true;
         }
