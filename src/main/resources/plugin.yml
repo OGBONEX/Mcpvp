@@ -30,9 +30,6 @@ commands:
   spec:
     description: Spectate an active match
     usage: /spec <player|leave>
-  kits:
-    description: Open the kit queue selector
-    usage: /kits
   menu:
     description: Open the MCPvP navigation menu
     usage: /menu
