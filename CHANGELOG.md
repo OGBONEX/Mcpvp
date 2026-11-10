@@ -2,49 +2,20 @@
 
 All notable MCPvP changes are documented here.
 
-This project follows Semantic Versioning:
-- PATCH (1.0.x): backwards-compatible bug fixes.
-- MINOR (1.x.0): backwards-compatible features.
-- MAJOR (x.0.0): major changes that may break compatibility.
-
 ## [Unreleased]
 
 ### Added
-- 80 themed arena preset slots, ready for administrators to configure with physical maps and spawn points.
-- Configurable tab header/footer and rank prefixes.
-- Configurable sidebar scoreboard with online count, rank and wins.
-- Win-based rank tiers and `/rank [player]` command.
+- Persistent role ranks: Owner, Co-owner, Admin, SR mod, Mod, Creator, Booster and Player.
+- `/rank set`, `/rank add` and `/rank remove` administration commands.
+- Configurable rank prefixes in the tab list and scoreboard.
+- Arena theme assignment for Classic, Desert, Nether, Snow, Sky, Nature, Stone, Water, Medieval, Industrial, Fantasy, Town, End and Modern.
+- Shrinking per-player match world border.
+- Tag-triggered GitHub Release workflow that attaches the built plugin JAR.
 
+### Changed
+- Removed win-threshold ranks; player ranks are now assigned and persisted by UUID.
+- Advanced development version to 0.7.0-SNAPSHOT.
 
-### Added
-- Queue population lookup with `/queue status <kit>`.
-- Kill and death statistics in player profiles.
-- Top kills leaderboard through `/stats top kills`.
-
-### Added
-- Interactive kit selection menu with click-to-queue behavior.
-- Match information and forfeit commands.
-- Arena deletion command.
-
-### Fixed
-- Duel default kit now falls back to the first available kit when no explicit kit is configured.
-
-### Added
-- Player-to-player duel requests with accept/deny and automatic expiry.
-- Spectator mode for active matches with return location and game mode restoration.
-- Top 10 wins leaderboard through `/stats top`.
-- Lobby deaths retain vanilla drop behavior; match deaths use match restoration.
-
-### Added
-- Inventory-based kit creation, listing, deletion and kit giving.
-- Arena creation and configurable player spawn points.
-- Same-kit 1v1 matchmaking queues.
-- Match start and end handling for player deaths and disconnects.
-- Player inventory, armor, offhand, location and basic status restoration after matches.
-- Persistent player win/loss statistics.
-- Lobby setup and return commands.
-- Command permissions and updated project documentation.
-
-### Development
-- Version advanced to 0.2.0-SNAPSHOT.
-- Gameplay systems remain under active development; this is not yet the 1.0.0 stable release.
+### Notes
+- Arena themes describe the intended block palette/style. They do not auto-generate or repaint physical maps.
+- Existing arena records and spawn locations are retained. Existing win-based rank tiers are no longer used.
