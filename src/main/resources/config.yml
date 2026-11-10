@@ -6,6 +6,8 @@ settings:
     match-mode: same-kit
   matches:
     restore-inventory-after-match: true
+duels:
+  default-kit: ""
 lobby:
   world: ""
   x: 0.0
