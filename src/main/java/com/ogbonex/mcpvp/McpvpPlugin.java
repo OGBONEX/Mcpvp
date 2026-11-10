@@ -233,7 +233,10 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             return new Location(w, data.getDouble(base + ".x"), data.getDouble(base + ".y"),
                     data.getDouble(base + ".z"), (float)data.getDouble(base + ".yaw"), (float)data.getDouble(base + ".pitch"));
         }
-        boolean hasRegion(String name) { return get(name, "region.pos1") != null && get(name, "region.pos2") != null; }
+        boolean hasRegion(String name) {
+            Location one=get(name,"region.pos1"), two=get(name,"region.pos2");
+            return one!=null && two!=null && one.getWorld()!=null && one.getWorld().equals(two.getWorld());
+        }
         boolean contains(String name, Location location) {
             Location one=get(name,"region.pos1"), two=get(name,"region.pos2");
             if(one==null || two==null || location.getWorld()==null || !location.getWorld().equals(one.getWorld()) || !one.getWorld().equals(two.getWorld())) return false;
@@ -300,7 +303,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         }
         boolean start(Player a, Player b, String kit) {
             String arena = arenas.firstReady();
-            if (arena == null) { msg(a, "No ready arena. An admin must create an arena and set both spawns."); msg(b, "No ready arena is configured."); return false; }
+            if (arena == null) { msg(a, "No ready arena. An admin must set both spawns and both arena region corners."); msg(b, "No ready arena is configured."); return false; }
             Location sa=arenas.get(arena,"spawn-a"), sb=arenas.get(arena,"spawn-b");
             if (sa == null || sb == null) return false;
             snapshots.put(a.getUniqueId(), new Snapshot(a)); snapshots.put(b.getUniqueId(), new Snapshot(b));
@@ -438,7 +441,11 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             Match m = active.get(player.getUniqueId());
             return m == null ? null : Bukkit.getPlayer(m.opponent(player.getUniqueId()));
         }
-        void shutdown() { for (UUID id : new ArrayList<>(snapshots.keySet())) restore(Bukkit.getPlayer(id)); active.clear(); }
+        void shutdown() {
+            for (Match match : new HashSet<>(active.values())) restoreArena(match);
+            for (UUID id : new ArrayList<>(snapshots.keySet())) restore(Bukkit.getPlayer(id));
+            active.clear();
+        }
     }
 
     private final class DuelManager {
