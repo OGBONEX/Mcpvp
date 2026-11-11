@@ -27,7 +27,7 @@ tab:
 scoreboard:
   enabled: true
   title: "&6&lMCPvP"
-  queue-label: "Use /kits"
+  queue-label: "Use /queue"
 rank-prefixes:
   owner: "&4[Owner]"
   co-owner: "&c[Co-owner]"
