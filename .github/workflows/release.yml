@@ -1,4 +1,4 @@
-name: Publish MCPvP Release
+name: Publish SoulPvP Release
 
 on:
   push:
