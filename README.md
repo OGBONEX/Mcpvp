@@ -4,7 +4,7 @@ A competitive Minecraft PvP system for **Paper 1.21.11**, built with **Java 21**
 
 ## Current version
 
-**SoulPvP v0.7.9**
+**SoulPvP v0.7.13**
 
 Implemented:
 - Main navigation GUI via `/menu` or `/mcpvp menu`.
