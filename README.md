@@ -1,4 +1,4 @@
-# SoulPvP v0.7.10
+# SoulPvP v0.7.11
 
 A competitive Minecraft PvP system for **Paper 1.21.11**, built with **Java 21** and **Gradle**. Create custom kits, send players into fast matchmaking, challenge rivals, and run block-editable arenas that reset between matches.
 
@@ -30,6 +30,7 @@ Implemented:
 - Rematch requests with `/rematch` and `/rematch accept`.
 - `/elo` and `/streak` player commands.
 - Party management with invitations, leader transfer, member removal, party chat and configurable size limit.
+- Persistent achievements for wins, kills, ELO milestones and killstreaks, with achievement points.
 
 ## GUI navigation
 
@@ -55,6 +56,12 @@ Implemented:
 - `/settings` — opens personal settings for player visibility and the scoreboard.
 - `/ffa join <arena> <kit>` — join a configured free-for-all arena.
 - `/ffa leave` — restore your inventory and return to your previous location.
+
+## Achievements
+
+- `/achievements` — view progress, unlocked achievements and total achievement points.
+- Achievements unlock automatically for match wins, PvP kills, ELO milestones and killstreak milestones.
+- Achievements are saved in `achievements.yml` and persist across restarts.
 
 ## Party commands
 
