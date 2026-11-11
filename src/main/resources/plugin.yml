@@ -16,7 +16,7 @@ commands:
     usage: /arena
   queue:
     description: Join, leave or inspect kit matchmaking
-    usage: /queue <join|leave|status>
+    usage: /queue [ranked|unranked] <kit>
   leave:
     description: Leave your current matchmaking queue
     usage: /leave
