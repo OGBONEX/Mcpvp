@@ -40,6 +40,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     private PlayerSettingsManager playerSettings;
     private FfaManager ffa;
     private PartyManager parties;
+    private AchievementManager achievements;
     private Location lobby;
 
     @Override public void onEnable() {
@@ -56,6 +57,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         playerSettings = new PlayerSettingsManager();
         ffa = new FfaManager();
         parties = new PartyManager();
+        achievements = new AchievementManager();
         displays = new LobbyDisplayManager(this, id -> stats.get(id, "wins"), ranks::getRank, id -> playerSettings.enabled(id, "scoreboard", true));
         Bukkit.getScheduler().runTaskTimer(this, displays::refreshAll, 20L, 20L);
         loadLobby();
@@ -67,6 +69,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         bind("settings", new SettingsCommand());
         bind("ffa", new FfaCommand());
         bind("party", new PartyCommand());
+        bind("achievements", new AchievementsCommand());
         bind("mcpvp", new MainCommand());
         bind("stats", new StatsCommand());
         bind("duel", new DuelCommand());
@@ -144,6 +147,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         if (killer != null && !killer.equals(victim)) {
             stats.add(killer.getUniqueId(), "kills", 1);
             progression.recordKill(killer);
+            achievements.check(killer);
         }
     }
 
@@ -473,6 +477,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
                 stats.add(winner.getUniqueId(),"wins",1);
                 stats.add(winner.getUniqueId(),"kills",1);
                 progression.recordResult(winner, loser, m.kit, m.ranked);
+                achievements.check(winner);
                 winner.sendMessage(ChatColor.GREEN + "You won the " + m.kit + " match!");
             }
             stats.add(loser.getUniqueId(),"losses",1);
@@ -879,6 +884,65 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             button(menu, 14, Material.GOLD_INGOT, "Top Players", "leaderboard", "View the wins leaderboard.");
             button(menu, 16, Material.MAP, "Arena List", "arenas", "View available arena records.");
             player.openInventory(menu);
+            return true;
+        }
+    }
+
+    private final class AchievementManager {
+        private final File file = new File(getDataFolder(), "achievements.yml");
+        private final YamlConfiguration data = YamlConfiguration.loadConfiguration(file);
+        private record Achievement(String id, String name, String description, int points, java.util.function.ToIntFunction<UUID> progress, int target) {}
+        private final List<Achievement> all = List.of(
+            new Achievement("first_win", "First Victory", "Win your first match", 10, id -> stats.get(id, "wins"), 1),
+            new Achievement("wins_10", "Getting Started", "Win 10 matches", 25, id -> stats.get(id, "wins"), 10),
+            new Achievement("wins_50", "Arena Regular", "Win 50 matches", 60, id -> stats.get(id, "wins"), 50),
+            new Achievement("wins_100", "Centurion", "Win 100 matches", 100, id -> stats.get(id, "wins"), 100),
+            new Achievement("first_kill", "First Elimination", "Get your first PvP kill", 5, id -> stats.get(id, "kills"), 1),
+            new Achievement("kills_50", "Skilled Fighter", "Get 50 PvP kills", 30, id -> stats.get(id, "kills"), 50),
+            new Achievement("kills_100", "Veteran Fighter", "Get 100 PvP kills", 60, id -> stats.get(id, "kills"), 100),
+            new Achievement("elo_1200", "Rising Rating", "Reach 1200 ELO", 30, id -> progression.elo(id), 1200),
+            new Achievement("elo_1500", "Elite Rating", "Reach 1500 ELO", 75, id -> progression.elo(id), 1500),
+            new Achievement("streak_5", "On a Roll", "Reach a 5 killstreak", 25, id -> progression.bestStreak(id), 5)
+        );
+        void check(Player player) {
+            UUID id = player.getUniqueId();
+            List<String> unlocked = new ArrayList<>(data.getStringList(id + ".unlocked"));
+            boolean changed = false;
+            for (Achievement achievement : all) {
+                if (unlocked.contains(achievement.id()) || achievement.progress().applyAsInt(id) < achievement.target()) continue;
+                unlocked.add(achievement.id());
+                changed = true;
+                player.sendMessage(ChatColor.GOLD + "Achievement unlocked: " + ChatColor.YELLOW + achievement.name()
+                    + ChatColor.GRAY + " (+" + achievement.points() + " points)");
+            }
+            if (changed) {
+                data.set(id + ".unlocked", unlocked);
+                save();
+            }
+        }
+        int points(UUID id) {
+            Set<String> unlocked = new HashSet<>(data.getStringList(id + ".unlocked"));
+            return all.stream().filter(a -> unlocked.contains(a.id())).mapToInt(Achievement::points).sum();
+        }
+        void show(Player player) {
+            check(player);
+            Set<String> unlocked = new HashSet<>(data.getStringList(player.getUniqueId() + ".unlocked"));
+            msg(player, "Achievements: " + unlocked.size() + "/" + all.size() + " | Points: " + points(player.getUniqueId()));
+            for (Achievement a : all) {
+                int current = Math.min(a.target(), a.progress().applyAsInt(player.getUniqueId()));
+                String status = unlocked.contains(a.id()) ? ChatColor.GREEN + "UNLOCKED" : ChatColor.GRAY + current + "/" + a.target();
+                player.sendMessage(ChatColor.YELLOW + a.name() + ChatColor.GRAY + " — " + a.description() + " [" + status + ChatColor.GRAY + "]");
+            }
+        }
+        private void save() {
+            try { data.save(file); } catch (IOException ex) { getLogger().warning("Could not save achievements: " + ex.getMessage()); }
+        }
+    }
+
+    private final class AchievementsCommand implements CommandExecutor {
+        public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+            if (!(sender instanceof Player player)) { msg(sender, "Players only."); return true; }
+            achievements.show(player);
             return true;
         }
     }
