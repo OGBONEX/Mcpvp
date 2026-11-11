@@ -59,7 +59,7 @@ jobs:
             echo "No plugin JAR was produced."
             exit 1
           fi
-          cp "$JAR" "dist/MCPvP-v${{ steps.version.outputs.version }}.jar"
+          cp "$JAR" "dist/SoulPvP-v${{ steps.version.outputs.version }}.jar"
           cd dist
           sha256sum *.jar > SHA256SUMS.txt
 
@@ -68,9 +68,9 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           target_commitish: main
-          name: MCPvP v${{ steps.version.outputs.version }}
+          name: SoulPvP v${{ steps.version.outputs.version }}
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            dist/MCPvP-v${{ steps.version.outputs.version }}.jar
+            dist/SoulPvP-v${{ steps.version.outputs.version }}.jar
             dist/SHA256SUMS.txt
