@@ -1,10 +1,10 @@
-# MCPvP v0.7.9
+# SoulPvP v0.7.9
 
 A competitive Minecraft PvP system for **Paper 1.21.11**, built with **Java 21** and **Gradle**. Create custom kits, send players into fast matchmaking, challenge rivals, and run block-editable arenas that reset between matches.
 
 ## Current version
 
-**MCPvP v0.7.9**
+**SoulPvP v0.7.9**
 
 Implemented:
 - Main navigation GUI via `/menu` or `/mcpvp menu`.
@@ -113,7 +113,7 @@ The JAR is written to `build/libs/`.
 
 ## GitHub Releases
 
-Pushing a version tag such as `v0.7.9` triggers the release workflow. You can also publish manually from GitHub Actions using **Publish MCPvP Release → Run workflow**, entering the version without the `v` prefix. The workflow builds the plugin and publishes a GitHub Release titled `MCPvP vX.Y.Z`, with generated release notes, `MCPvP-vX.Y.Z.jar` and a SHA-256 checksum attached. Normal pushes to `main` build the plugin and upload a temporary JAR artifact.
+Pushing a version tag such as `v0.7.9` triggers the release workflow. You can also publish manually from GitHub Actions using **Publish SoulPvP Release → Run workflow**, entering the version without the `v` prefix. The workflow builds the plugin and publishes a GitHub Release titled `SoulPvP vX.Y.Z`, with generated release notes, `SoulPvP-vX.Y.Z.jar` and a SHA-256 checksum attached. Normal pushes to `main` build the plugin and upload a temporary JAR artifact.
 
 ## Queue controls
 
