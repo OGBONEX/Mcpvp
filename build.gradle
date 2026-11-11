@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'com.ogbonex'
-version = providers.gradleProperty('releaseVersion').getOrElse('0.7.8')
+version = providers.gradleProperty('releaseVersion').getOrElse('0.7.9')
 
 repositories {
     mavenCentral()
