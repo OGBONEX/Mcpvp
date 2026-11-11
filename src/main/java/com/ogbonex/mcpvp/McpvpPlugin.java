@@ -81,7 +81,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         bind("streak", new ProgressionCommand());
         bind("history", new ProgressionCommand());
         bind("rematch", new RematchCommand());
-        getLogger().info("MCPvP " + getPluginMeta().getVersion() + " enabled.");
+        getLogger().info("Mcpvp-Remake " + getPluginMeta().getVersion() + " enabled.");
     }
 
     @Override public void onDisable() {
@@ -110,7 +110,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     }
 
     private void msg(CommandSender sender, String text) {
-        sender.sendMessage(ChatColor.GOLD + "[MCPvP] " + ChatColor.GRAY + text);
+        sender.sendMessage(ChatColor.GOLD + "[Mcpvp-Remake] " + ChatColor.GRAY + text);
     }
 
     private String clean(String input) {
@@ -166,7 +166,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     @EventHandler public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
-        if (title.equals("MCPvP Settings")) {
+        if (title.equals("Mcpvp-Remake Settings")) {
             event.setCancelled(true);
             if (event.getClickedInventory() == null || !event.getClickedInventory().equals(event.getView().getTopInventory())) return;
             ItemStack clicked = event.getCurrentItem();
@@ -179,7 +179,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             new SettingsCommand().onCommand(player, null, "settings", new String[0]);
             return;
         }
-        if (title.equals("MCPvP Queue Mode")) {
+        if (title.equals("Mcpvp-Remake Queue Mode")) {
             event.setCancelled(true);
             if (event.getClickedInventory() == null || !event.getClickedInventory().equals(event.getView().getTopInventory())) return;
             ItemStack selected = event.getCurrentItem();
@@ -194,7 +194,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             queues.join(player, kit, mode.equals("ranked"));
             return;
         }
-        if (title.equals("MCPvP Menu")) {
+        if (title.equals("Mcpvp-Remake Menu")) {
             event.setCancelled(true);
             ItemStack selected = event.getCurrentItem();
             if (selected == null || !selected.hasItemMeta()) return;
@@ -205,7 +205,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             else if ("arenas".equals(action)) { player.closeInventory(); msg(player, "Arena presets and maps: " + String.join(", ", arenas.names())); }
             return;
         }
-        if (!title.equals("MCPvP Kits")) return;
+        if (!title.equals("Mcpvp-Remake Kits")) return;
         event.setCancelled(true);
         if (event.getClickedInventory() == null || !event.getClickedInventory().equals(event.getView().getTopInventory())) return;
         ItemStack clicked = event.getCurrentItem();
@@ -230,7 +230,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     }
 
     private void openQueueModeMenu(Player player, String kit) {
-        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "MCPvP Queue Mode");
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "Mcpvp-Remake Queue Mode");
         ItemStack ranked = new ItemStack(Material.DIAMOND_SWORD);
         ItemMeta rankedMeta = ranked.getItemMeta();
         rankedMeta.setDisplayName(ChatColor.GOLD + "Ranked Queue");
@@ -825,7 +825,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
 
     private final class MainCommand implements CommandExecutor {
         public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
-            if (a.length==0) { msg(s,"MCPvP commands: /menu, /queue, /kit, /arena, /stats, /mcpvp lobby"); return true; }
+            if (a.length==0) { msg(s,"Mcpvp-Remake commands: /menu, /queue, /kit, /arena, /stats, /mcpvp lobby"); return true; }
             if (a[0].equalsIgnoreCase("menu")) { if (s instanceof Player p) new MainMenuCommand().onCommand(p, c, l, new String[0]); else msg(s, "Players only."); }
             else if (a[0].equalsIgnoreCase("setlobby") && s instanceof Player p && s.hasPermission("mcpvp.admin")) {
                 saveLobby(p.getLocation()); msg(s,"Lobby location saved.");
@@ -844,7 +844,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (!(sender instanceof Player player)) { msg(sender, "Players only."); return true; }
             List<String> names = kits.names();
             if (names.isEmpty()) { msg(player, "No kits have been created yet."); return true; }
-            Inventory menu = Bukkit.createInventory(null, Math.min(54, ((names.size() + 8) / 9) * 9), ChatColor.DARK_AQUA + "MCPvP Kits");
+            Inventory menu = Bukkit.createInventory(null, Math.min(54, ((names.size() + 8) / 9) * 9), ChatColor.DARK_AQUA + "Mcpvp-Remake Kits");
             for (String name : names.stream().limit(54).toList()) {
                 ItemStack icon = new ItemStack(kits.icon(name));
                 ItemMeta meta = icon.getItemMeta();
@@ -878,7 +878,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         }
         public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
             if (!(sender instanceof Player player)) { msg(sender, "Players only."); return true; }
-            Inventory menu = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "MCPvP Menu");
+            Inventory menu = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "Mcpvp-Remake Menu");
             button(menu, 10, Material.IRON_SWORD, "Queue", "kits", "Browse kits and join matchmaking with /queue.");
             button(menu, 12, Material.PLAYER_HEAD, "My Statistics", "stats", "View your wins, losses and match record.");
             button(menu, 14, Material.GOLD_INGOT, "Top Players", "leaderboard", "View the wins leaderboard.");
@@ -1248,7 +1248,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         }
         public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
             if (!(sender instanceof Player player)) { msg(sender, "Players only."); return true; }
-            Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "MCPvP Settings");
+            Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "Mcpvp-Remake Settings");
             button(inv, 11, Material.OAK_SIGN, "Show players", "players", playerSettings.enabled(player.getUniqueId(), "players", true));
             button(inv, 15, Material.COMPARATOR, "Scoreboard", "scoreboard", playerSettings.enabled(player.getUniqueId(), "scoreboard", true));
             player.openInventory(inv);
