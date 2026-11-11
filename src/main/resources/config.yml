@@ -1,4 +1,6 @@
 # MCPvP configuration
+party:
+  max-size: 8
 settings:
   debug: false
   queue:
