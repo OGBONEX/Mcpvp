@@ -3,6 +3,10 @@ plugins {
 }
 
 group = 'com.ogbonex'
+
+base {
+    archivesName = 'SoulPvP'
+}
 version = providers.gradleProperty('releaseVersion').getOrElse('0.7.9')
 
 repositories {
