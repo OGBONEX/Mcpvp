@@ -38,6 +38,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     private RankManager ranks;
     private PvpProgressionManager progression;
     private PlayerSettingsManager playerSettings;
+    private FfaManager ffa;
     private Location lobby;
 
     @Override public void onEnable() {
@@ -52,6 +53,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         ranks = new RankManager(this);
         progression = new PvpProgressionManager(this);
         playerSettings = new PlayerSettingsManager();
+        ffa = new FfaManager();
         displays = new LobbyDisplayManager(this, id -> stats.get(id, "wins"), ranks::getRank, id -> playerSettings.enabled(id, "scoreboard", true));
         Bukkit.getScheduler().runTaskTimer(this, displays::refreshAll, 20L, 20L);
         loadLobby();
@@ -61,6 +63,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         bind("queue", new QueueCommand());
         bind("leave", new LeaveCommand());
         bind("settings", new SettingsCommand());
+        bind("ffa", new FfaCommand());
         bind("mcpvp", new MainCommand());
         bind("stats", new StatsCommand());
         bind("duel", new DuelCommand());
@@ -122,6 +125,11 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             event.setKeepInventory(true);
             event.setKeepLevel(true);
             matches.handleDeath(event.getEntity());
+        } else if (ffa.inFfa(event.getEntity().getUniqueId())) {
+            event.getDrops().clear();
+            event.setDroppedExp(0);
+            event.setKeepInventory(true);
+            event.setKeepLevel(true);
         }
     }
     @EventHandler public void onOpenWorldPvpDeath(PlayerDeathEvent event) {
@@ -140,10 +148,12 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         queues.leave(event.getPlayer().getUniqueId());
         duels.clearFor(event.getPlayer().getUniqueId());
         spectators.restore(event.getPlayer());
+        ffa.handleQuit(event.getPlayer());
         matches.handleQuit(event.getPlayer());
     }
     @EventHandler public void onRespawn(PlayerRespawnEvent event) {
         matches.handleRespawn(event);
+        ffa.handleRespawn(event);
     }
     @EventHandler public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
@@ -206,6 +216,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     @EventHandler public void onJoin(PlayerJoinEvent event) {
         Bukkit.getScheduler().runTaskLater(this, () -> {
             matches.restorePending(event.getPlayer());
+            ffa.restorePending(event.getPlayer());
             for (Player online : Bukkit.getOnlinePlayers()) playerSettings.apply(online);
         }, 1L);
     }
@@ -864,6 +875,75 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             button(menu, 14, Material.GOLD_INGOT, "Top Players", "leaderboard", "View the wins leaderboard.");
             button(menu, 16, Material.MAP, "Arena List", "arenas", "View available arena records.");
             player.openInventory(menu);
+            return true;
+        }
+    }
+
+    private final class FfaManager {
+        private final Map<UUID, FfaSession> active = new HashMap<>();
+        private final Map<UUID, FfaSnapshot> pendingRestore = new HashMap<>();
+        private final class FfaSnapshot {
+            final ItemStack[] contents, armor; final ItemStack offhand; final Location location;
+            final int food, level; final double health; final float exp; final GameMode gameMode;
+            FfaSnapshot(Player p) {
+                contents = p.getInventory().getContents().clone(); armor = p.getInventory().getArmorContents().clone();
+                offhand = p.getInventory().getItemInOffHand().clone(); location = p.getLocation().clone();
+                food = p.getFoodLevel(); health = p.getHealth(); level = p.getLevel(); exp = p.getExp(); gameMode = p.getGameMode();
+            }
+            void restore(Player p) {
+                p.getInventory().clear(); p.getInventory().setContents(contents); p.getInventory().setArmorContents(armor);
+                p.getInventory().setItemInOffHand(offhand); p.setFoodLevel(food); p.setHealth(Math.max(1.0, Math.min(health, p.getMaxHealth())));
+                p.setLevel(level); p.setExp(exp); p.setFireTicks(0); p.setFallDistance(0); p.setGameMode(gameMode); p.teleport(location);
+            }
+        }
+        private final class FfaSession {
+            final FfaSnapshot snapshot; final String arena, kit;
+            FfaSession(FfaSnapshot snapshot, String arena, String kit) { this.snapshot=snapshot; this.arena=arena; this.kit=kit; }
+        }
+        boolean inFfa(UUID id) { return active.containsKey(id); }
+        void join(Player player, String arena, String kit) {
+            if (matches.inMatch(player.getUniqueId()) || queues.queuedKit(player.getUniqueId()) != null || inFfa(player.getUniqueId())) { msg(player, "Leave your current match or queue before joining FFA."); return; }
+            Location spawn = arenas.get(arena, "spawn-a");
+            if (spawn == null || !arenas.hasRegion(arena)) { msg(player, "FFA arena needs spawn-a and both region corners configured."); return; }
+            if (!kits.exists(kit)) { msg(player, "Unknown kit. Use /kit list."); return; }
+            FfaSnapshot snapshot = new FfaSnapshot(player);
+            active.put(player.getUniqueId(), new FfaSession(snapshot, arena, kit));
+            player.teleport(spawn); kits.apply(player, kit); player.setGameMode(GameMode.SURVIVAL);
+            msg(player, "Joined FFA in " + arena + " using " + kit + ". Use /ffa leave to return.");
+        }
+        void leave(Player player) {
+            FfaSession session = active.remove(player.getUniqueId());
+            if (session == null) { msg(player, "You are not in FFA."); return; }
+            session.snapshot.restore(player);
+            msg(player, "You left FFA.");
+        }
+        void handleQuit(Player player) {
+            FfaSession session = active.remove(player.getUniqueId());
+            if (session != null) pendingRestore.put(player.getUniqueId(), session.snapshot);
+        }
+        void restorePending(Player player) {
+            FfaSnapshot snapshot = pendingRestore.remove(player.getUniqueId());
+            if (snapshot != null) snapshot.restore(player);
+        }
+        void handleRespawn(PlayerRespawnEvent event) {
+            FfaSession session = active.get(event.getPlayer().getUniqueId());
+            if (session == null) return;
+            Location spawn = arenas.get(session.arena, "spawn-a");
+            if (spawn != null) event.setRespawnLocation(spawn);
+            Bukkit.getScheduler().runTaskLater(McpvpPlugin.this, () -> {
+                if (!event.getPlayer().isOnline() || !active.containsKey(event.getPlayer().getUniqueId())) return;
+                Player p = event.getPlayer(); p.setHealth(p.getMaxHealth()); p.setFoodLevel(20); p.setSaturation(20);
+                p.setFireTicks(0); p.setFallDistance(0); kits.apply(p, session.kit);
+            }, 1L);
+        }
+    }
+
+    private final class FfaCommand implements CommandExecutor {
+        public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+            if (!(sender instanceof Player player)) { msg(sender, "Players only."); return true; }
+            if (args.length == 1 && args[0].equalsIgnoreCase("leave")) { ffa.leave(player); return true; }
+            if (args.length == 3 && args[0].equalsIgnoreCase("join")) { ffa.join(player, args[1], args[2]); return true; }
+            msg(player, "Usage: /ffa join <arena> <kit> or /ffa leave");
             return true;
         }
     }
