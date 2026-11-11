@@ -1,9 +1,9 @@
-name: MCPvP
+name: SoulPvP
 version: '${version}'
 main: com.ogbonex.mcpvp.McpvpPlugin
 api-version: '1.21.11'
 authors: [OGBONEX]
-description: "Competitive PvP with kit matchmaking, duels, ranked-ready stats and custom arenas."
+description: "SoulPvP competitive Minecraft PvP: kits, ranked matchmaking, duels, FFA and custom arenas."
 commands:
   mcpvp:
     description: Main command
