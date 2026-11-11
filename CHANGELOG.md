@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.7.11
+- Added persistent PvP achievements for match wins, kills, ELO milestones and killstreak milestones.
+- Added achievement point values and `/achievements` progress listing.
+- Achievement unlocks are saved in `achievements.yml`.
+
 ## v0.7.10
 - Added party creation, 60-second invitations, acceptance and configurable membership limits.
 - Added party info, private party chat, member kicking and leader-only disbanding.
