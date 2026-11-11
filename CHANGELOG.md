@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.7.13
+- Added `/party ffa <arena> <kit>` to join the same FFA arena with the full party after validating all members.
+- Added `/party split` to randomly divide a party into two balanced separate parties.
+- Party split keeps the original leader in Team A and assigns the first Team B member as its leader.
+
 ## v0.7.12
 - Fixed an achievement progress display compile error.
 
