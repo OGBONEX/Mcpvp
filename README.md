@@ -1,4 +1,4 @@
-# SoulPvP v0.7.12
+# SoulPvP v0.7.13
 
 A competitive Minecraft PvP system for **Paper 1.21.11**, built with **Java 21** and **Gradle**. Create custom kits, send players into fast matchmaking, challenge rivals, and run block-editable arenas that reset between matches.
 
@@ -72,10 +72,12 @@ Implemented:
 - `/party leave` — leave your current party; leadership transfers to the next member if the leader leaves.
 - `/party kick <player>` — remove a member (leader only).
 - `/party disband` — disband the party (leader only).
+- `/party split` — randomly divide the party into two balanced, separate parties; the original leader stays in Team A.
+- `/party ffa <arena> <kit>` — send every online party member into the same FFA arena and kit (leader only). All members must be free of matches, queues and other FFA sessions.
 - `/party chat <message>` — send a message to party members.
 - Configure `party.max-size` in `config.yml` (default: 8).
 
-Party management is currently separate from matchmaking; party-vs-party team matches are not included yet.
+Party splitting creates two separate party groups for organising teams; it does not automatically start a team match. Party FFA joins the existing shared FFA arena, so other players in that arena can also participate.
 
 ## Match commands
 
