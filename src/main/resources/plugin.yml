@@ -21,6 +21,9 @@ commands:
     description: Leave your current matchmaking queue
     usage: /leave
     aliases: [qleave]
+  settings:
+    description: Open your player settings
+    usage: /settings
   stats:
     description: View player match statistics and leaderboard
     usage: /stats [player|top [wins|kills]]
