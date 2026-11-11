@@ -930,7 +930,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             msg(player, "Achievements: " + unlocked.size() + "/" + all.size() + " | Points: " + points(player.getUniqueId()));
             for (Achievement a : all) {
                 int current = Math.min(a.target(), a.progress().applyAsInt(player.getUniqueId()));
-                String status = unlocked.contains(a.id()) ? ChatColor.GREEN + "UNLOCKED" : ChatColor.GRAY + current + "/" + a.target();
+                String status = unlocked.contains(a.id()) ? ChatColor.GREEN + "UNLOCKED" : ChatColor.GRAY.toString() + current + "/" + a.target();
                 player.sendMessage(ChatColor.YELLOW + a.name() + ChatColor.GRAY + " — " + a.description() + " [" + status + ChatColor.GRAY + "]");
             }
         }
