@@ -37,6 +37,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     private LobbyDisplayManager displays;
     private RankManager ranks;
     private PvpProgressionManager progression;
+    private PlayerSettingsManager playerSettings;
     private Location lobby;
 
     @Override public void onEnable() {
@@ -50,6 +51,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         spectators = new SpectatorManager();
         ranks = new RankManager(this);
         progression = new PvpProgressionManager(this);
+        playerSettings = new PlayerSettingsManager();
         displays = new LobbyDisplayManager(this, id -> stats.get(id, "wins"), ranks::getRank);
         Bukkit.getScheduler().runTaskTimer(this, displays::refreshAll, 20L, 20L);
         loadLobby();
@@ -57,6 +59,8 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         bind("kit", new KitCommand());
         bind("arena", new ArenaCommand());
         bind("queue", new QueueCommand());
+        bind("leave", new LeaveCommand());
+        bind("settings", new SettingsCommand());
         bind("mcpvp", new MainCommand());
         bind("stats", new StatsCommand());
         bind("duel", new DuelCommand());
@@ -124,8 +128,12 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         Player victim = event.getEntity();
         if (matches.inMatch(victim.getUniqueId())) return;
         progression.recordDeath(victim);
+        stats.add(victim.getUniqueId(), "deaths", 1);
         Player killer = victim.getKiller();
-        if (killer != null && !killer.equals(victim)) progression.recordKill(killer);
+        if (killer != null && !killer.equals(victim)) {
+            stats.add(killer.getUniqueId(), "kills", 1);
+            progression.recordKill(killer);
+        }
     }
 
     @EventHandler public void onQuit(PlayerQuitEvent event) {
@@ -140,6 +148,19 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     @EventHandler public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         String title = ChatColor.stripColor(event.getView().getTitle());
+        if (title.equals("MCPvP Settings")) {
+            event.setCancelled(true);
+            if (event.getClickedInventory() == null || !event.getClickedInventory().equals(event.getView().getTopInventory())) return;
+            ItemStack clicked = event.getCurrentItem();
+            if (clicked == null || !clicked.hasItemMeta()) return;
+            String action = clicked.getItemMeta().getPersistentDataContainer().get(new org.bukkit.NamespacedKey(this, "settings-action"), org.bukkit.persistence.PersistentDataType.STRING);
+            if (action == null) return;
+            if (action.equals("scoreboard")) playerSettings.toggle(player, "scoreboard");
+            if (action.equals("players")) playerSettings.toggle(player, "players");
+            playerSettings.apply(player);
+            new SettingsCommand().onCommand(player, null, "settings", new String[0]);
+            return;
+        }
         if (title.equals("MCPvP Menu")) {
             event.setCancelled(true);
             ItemStack selected = event.getCurrentItem();
@@ -171,6 +192,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         Bukkit.getScheduler().runTaskLater(this, () -> {
             matches.restorePending(event.getPlayer());
             displays.refresh(event.getPlayer());
+            playerSettings.apply(event.getPlayer());
         }, 1L);
     }
 
@@ -401,10 +423,12 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             Player winner = Bukkit.getPlayer(m.opponent(loser.getUniqueId()));
             if (winner != null) {
                 stats.add(winner.getUniqueId(),"wins",1);
+                stats.add(winner.getUniqueId(),"kills",1);
                 progression.recordResult(winner, loser, m.kit);
                 winner.sendMessage(ChatColor.GREEN + "You won the " + m.kit + " match!");
             }
             stats.add(loser.getUniqueId(),"losses",1);
+            stats.add(loser.getUniqueId(),"deaths",1);
             progression.recordLoss(loser, winner, m.kit);
             active.remove(m.one); active.remove(m.two);
             restoreArena(m);
@@ -425,8 +449,8 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         void handleQuit(Player player) {
             Match m = active.get(player.getUniqueId()); if (m == null) return;
             Player winner = Bukkit.getPlayer(m.opponent(player.getUniqueId()));
-            if (winner != null) { stats.add(winner.getUniqueId(),"wins",1); progression.recordResult(winner, player, m.kit); winner.sendMessage(ChatColor.GREEN + "Opponent left. You win!"); }
-            stats.add(player.getUniqueId(),"losses",1); progression.recordLoss(player, winner, m.kit); finish(m);
+            if (winner != null) { stats.add(winner.getUniqueId(),"wins",1); stats.add(winner.getUniqueId(),"kills",1); progression.recordResult(winner, player, m.kit); winner.sendMessage(ChatColor.GREEN + "Opponent left. You win!"); }
+            stats.add(player.getUniqueId(),"losses",1); stats.add(player.getUniqueId(),"deaths",1); progression.recordLoss(player, winner, m.kit); finish(m);
         }
         void finish(Match m) {
             active.remove(m.one); active.remove(m.two);
@@ -482,9 +506,11 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (m == null) { msg(player, "You are not in a match."); return; }
             Player winner = Bukkit.getPlayer(m.opponent(player.getUniqueId()));
             stats.add(player.getUniqueId(), "losses", 1);
+            stats.add(player.getUniqueId(), "deaths", 1);
             progression.recordLoss(player, winner, m.kit);
             if (winner != null) {
                 stats.add(winner.getUniqueId(), "wins", 1);
+                stats.add(winner.getUniqueId(), "kills", 1);
                 progression.recordResult(winner, player, m.kit);
                 msg(winner, "Your opponent forfeited. You win!");
             }
@@ -786,6 +812,47 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    private final class PlayerSettingsManager {
+        private final File file = new File(getDataFolder(), "player-settings.yml");
+        private final YamlConfiguration data = YamlConfiguration.loadConfiguration(file);
+        boolean enabled(UUID id, String key, boolean fallback) { return data.getBoolean(id + "." + key, fallback); }
+        void toggle(Player player, String key) {
+            boolean next = !enabled(player.getUniqueId(), key, true);
+            data.set(player.getUniqueId() + "." + key, next);
+            try { data.save(file); } catch (IOException ex) { getLogger().warning("Could not save player settings: " + ex.getMessage()); }
+            msg(player, key + " setting: " + (next ? "ON" : "OFF"));
+        }
+        void apply(Player player) {
+            boolean visible = enabled(player.getUniqueId(), "players", true);
+            for (Player other : Bukkit.getOnlinePlayers()) {
+                if (other.equals(player)) continue;
+                if (visible) player.showPlayer(McpvpPlugin.this, other);
+                else player.hidePlayer(McpvpPlugin.this, other);
+            }
+            displays.refresh(player);
+        }
+    }
+
+    private final class SettingsCommand implements CommandExecutor {
+        private void button(Inventory inv, int slot, Material material, String label, String action, boolean enabled) {
+            ItemStack item = new ItemStack(material);
+            ItemMeta meta = item.getItemMeta();
+            meta.setDisplayName((enabled ? ChatColor.GREEN : ChatColor.RED) + label + (enabled ? " ON" : " OFF"));
+            meta.setLore(List.of(ChatColor.GRAY + "Click to toggle"));
+            meta.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(McpvpPlugin.this, "settings-action"), org.bukkit.persistence.PersistentDataType.STRING, action);
+            item.setItemMeta(meta);
+            inv.setItem(slot, item);
+        }
+        public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+            if (!(sender instanceof Player player)) { msg(sender, "Players only."); return true; }
+            Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "MCPvP Settings");
+            button(inv, 11, Material.OAK_SIGN, "Show players", "players", playerSettings.enabled(player.getUniqueId(), "players", true));
+            button(inv, 15, Material.COMPARATOR, "Scoreboard", "scoreboard", playerSettings.enabled(player.getUniqueId(), "scoreboard", true));
+            player.openInventory(inv);
+            return true;
+        }
+    }
+
     private final class RematchCommand implements CommandExecutor {
         public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
             if (!(sender instanceof Player player)) { msg(sender, "Players only."); return true; }
@@ -800,7 +867,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (!(sender instanceof Player player)) { msg(sender, "Players only."); return true; }
             String sub = command.getName().toLowerCase(Locale.ROOT);
             if (sub.equals("elo")) msg(player, "Your ELO: " + progression.elo(player.getUniqueId()) + " | Tier: " + progression.tier(player.getUniqueId()));
-            else if (sub.equals("streak")) msg(player, "Current killstreak: " + progression.streak(player.getUniqueId()) + " | Best: " + progression.bestStreak(player.getUniqueId()));
+            else if (sub.equals("streak")) msg(player, "Killstreak: " + progression.streak(player.getUniqueId()) + " (best " + progression.bestStreak(player.getUniqueId()) + ") | Win streak: " + progression.winStreak(player.getUniqueId()) + " (best " + progression.bestWinStreak(player.getUniqueId()) + ")");
             else msg(player, "Recent matches: " + progression.history(player.getUniqueId()));
             return true;
         }
