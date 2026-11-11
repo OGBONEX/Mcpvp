@@ -17,7 +17,7 @@ public final class PvpProgressionManager {
     private final Map<UUID, RematchRequest> pending = new HashMap<>();
     private final Map<UUID, Long> pendingAt = new HashMap<>();
 
-    public record RematchRequest(UUID opponent, String kit) {}
+    public record RematchRequest(UUID opponent, String kit, boolean ranked) {}
 
     public PvpProgressionManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -40,35 +40,40 @@ public final class PvpProgressionManager {
         return "Bronze";
     }
 
-    public void recordResult(Player winner, Player loser, String kit) {
+    public void recordResult(Player winner, Player loser, String kit, boolean ranked) {
         UUID win = winner.getUniqueId(), lose = loser.getUniqueId();
         int oldWinner = elo(win), oldLoser = elo(lose);
-        double expectedWinner = 1.0 / (1.0 + Math.pow(10.0, (oldLoser - oldWinner) / 400.0));
-        double expectedLoser = 1.0 / (1.0 + Math.pow(10.0, (oldWinner - oldLoser) / 400.0));
-        int winnerDelta = Math.max(1, (int)Math.round(32 * (1.0 - expectedWinner)));
-        int loserDelta = (int)Math.round(32 * (0.0 - expectedLoser));
-        data.set(win + ".elo", oldWinner + winnerDelta);
-        data.set(lose + ".elo", Math.max(0, oldLoser + loserDelta));
+        int winnerDelta = 0, loserDelta = 0;
+        if (ranked) {
+            double expectedWinner = 1.0 / (1.0 + Math.pow(10.0, (oldLoser - oldWinner) / 400.0));
+            double expectedLoser = 1.0 / (1.0 + Math.pow(10.0, (oldWinner - oldLoser) / 400.0));
+            winnerDelta = Math.max(1, (int)Math.round(32 * (1.0 - expectedWinner)));
+            loserDelta = (int)Math.round(32 * (0.0 - expectedLoser));
+            data.set(win + ".elo", oldWinner + winnerDelta);
+            data.set(lose + ".elo", Math.max(0, oldLoser + loserDelta));
+        }
         int current = winStreak(win) + 1;
         data.set(win + ".winstreak", current);
         data.set(win + ".best-winstreak", Math.max(bestWinStreak(win), current));
-        recent.put(win, new RematchRequest(lose, kit));
-        recent.put(lose, new RematchRequest(win, kit));
-        addHistory(win, "W vs " + loser.getName() + " (" + kit + ") +" + winnerDelta);
+        recent.put(win, new RematchRequest(lose, kit, ranked));
+        recent.put(lose, new RematchRequest(win, kit, ranked));
+        addHistory(win, (ranked ? "Ranked W vs " : "Unranked W vs ") + loser.getName() + " (" + kit + ")" + (ranked ? " +" + winnerDelta : ""));
         save();
-        winner.sendMessage(ChatColor.AQUA + "ELO +" + winnerDelta + " (" + (oldWinner + winnerDelta) + ") | " + tier(win));
-        loser.sendMessage(ChatColor.RED + "ELO " + loserDelta + " (" + Math.max(0, oldLoser + loserDelta) + ")");
+        if (ranked) {
+            winner.sendMessage(ChatColor.AQUA + "ELO +" + winnerDelta + " (" + (oldWinner + winnerDelta) + ") | " + tier(win));
+            loser.sendMessage(ChatColor.RED + "ELO " + loserDelta + " (" + Math.max(0, oldLoser + loserDelta) + ")");
+        }
     }
 
-    public void recordLoss(Player loser, Player winner, String kit) {
+    public void recordLoss(Player loser, Player winner, String kit, boolean ranked) {
         UUID id = loser.getUniqueId();
         data.set(id + ".winstreak", 0);
         data.set(id + ".killstreak", 0);
         if (winner != null) {
-            recent.put(id, new RematchRequest(winner.getUniqueId(), kit));
-            recent.put(winner.getUniqueId(), new RematchRequest(id, kit));
-            addHistory(id, "L vs " + winner.getName() + " (" + kit + ")");
-        } else addHistory(id, "L (" + kit + ")");
+            recent.put(id, new RematchRequest(winner.getUniqueId(), kit, ranked));
+            recent.put(winner.getUniqueId(), new RematchRequest(id, kit, ranked));
+            addHistory(id, (ranked ? "Ranked L vs " : "Unranked L vs ") + winner.getName() + " (" + kit + ")");
+        } else addHistory(id, (ranked ? "Ranked L (" : "Unranked L (") + kit + ")");
         save();
     }
 
@@ -99,8 +104,8 @@ public final class PvpProgressionManager {
     }
 
     public RematchRequest rematch(UUID id) { return recent.get(id); }
-    public void pendingRematch(UUID target, UUID challenger, String kit) {
-        pending.put(target, new RematchRequest(challenger, kit));
+    public void pendingRematch(UUID target, UUID challenger, String kit, boolean ranked) {
+        pending.put(target, new RematchRequest(challenger, kit, ranked));
         pendingAt.put(target, System.currentTimeMillis());
     }
     public RematchRequest takePendingRematch(UUID id) {
