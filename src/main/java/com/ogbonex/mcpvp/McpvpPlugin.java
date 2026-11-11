@@ -540,11 +540,11 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             Player winner = Bukkit.getPlayer(m.opponent(player.getUniqueId()));
             stats.add(player.getUniqueId(), "losses", 1);
             stats.add(player.getUniqueId(), "deaths", 1);
-            progression.recordLoss(player, winner, m.kit);
+            progression.recordLoss(player, winner, m.kit, m.ranked);
             if (winner != null) {
                 stats.add(winner.getUniqueId(), "wins", 1);
                 stats.add(winner.getUniqueId(), "kills", 1);
-                progression.recordResult(winner, player, m.kit);
+                progression.recordResult(winner, player, m.kit, m.ranked);
                 msg(winner, "Your opponent forfeited. You win!");
             }
             msg(player, "You forfeited the match.");
