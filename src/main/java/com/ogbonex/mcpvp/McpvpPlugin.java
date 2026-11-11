@@ -168,10 +168,12 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (selected == null || !selected.hasItemMeta()) return;
             String action = selected.getItemMeta().getPersistentDataContainer().get(new org.bukkit.NamespacedKey(this, "queue-mode"), org.bukkit.persistence.PersistentDataType.STRING);
             if (action == null) return;
-            String[] parts = action.split("\\\\|", 2);
-            if (parts.length != 2) return;
+            int separator = action.indexOf('|');
+            if (separator < 0) return;
+            String mode = action.substring(0, separator);
+            String kit = action.substring(separator + 1);
             player.closeInventory();
-            queues.join(player, parts[1], parts[0].equals("ranked"));
+            queues.join(player, kit, mode.equals("ranked"));
             return;
         }
         if (title.equals("MCPvP Menu")) {
@@ -662,11 +664,18 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             leave(player.getUniqueId());
             LinkedList<UUID> line = waiting.computeIfAbsent(queueKey, ignored -> new LinkedList<>());
             while (!line.isEmpty()) {
-                UUID otherId = line.removeFirst();
+                UUID otherId = line.getFirst();
                 Player other = Bukkit.getPlayer(otherId);
-                if (other != null && other.isOnline() && !matches.inMatch(otherId)) {
-                    if (matches.start(other, player, kit, ranked)) return true;
+                if (other == null || !other.isOnline() || matches.inMatch(otherId)) {
+                    line.removeFirst();
+                    continue;
                 }
+                if (matches.start(other, player, kit, ranked)) {
+                    line.removeFirst();
+                    if (line.isEmpty()) waiting.remove(queueKey);
+                    return true;
+                }
+                break;
             }
             line.add(player.getUniqueId());
             msg(player, "Queued for " + kit + " (" + (ranked ? "Ranked" : "Unranked") + "). Position: " + line.size() + ". Use /leave to leave.");
