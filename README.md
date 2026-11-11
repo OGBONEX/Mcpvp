@@ -113,7 +113,7 @@ The JAR is written to `build/libs/`.
 
 ## GitHub Releases
 
-Pushing a version tag such as `v0.7.5` triggers the release workflow. It builds the project and publishes a GitHub Release with generated release notes and the compiled JAR attached. Normal pushes to `main` run the build workflow.
+Pushing a version tag such as `v0.7.9` triggers the release workflow. You can also publish manually from GitHub Actions using **Publish MCPvP Release → Run workflow**, entering the version without the `v` prefix. The workflow builds the plugin and publishes a GitHub Release titled `MCPvP vX.Y.Z`, with generated release notes, `MCPvP-vX.Y.Z.jar` and a SHA-256 checksum attached. Normal pushes to `main` build the plugin and upload a temporary JAR artifact.
 
 ## Queue controls
 
