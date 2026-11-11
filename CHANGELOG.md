@@ -1,5 +1,10 @@
 # Changelog
 
+## Release automation
+- Added a dedicated GitHub Actions release workflow for `v*` tags and manual version publishing.
+- Release assets include the compiled versioned plugin JAR and SHA-256 checksum.
+- Standard main-branch builds now upload the compiled JAR as a 30-day workflow artifact.
+
 ## v0.7.9
 - Added free-for-all sessions with `/ffa join <arena> <kit>` and `/ffa leave`.
 - FFA restores the player's saved inventory, armor, location and game settings when they leave.
