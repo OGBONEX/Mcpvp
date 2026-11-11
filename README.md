@@ -1,10 +1,10 @@
-# SoulPvP v0.7.13
+# Mcpvp-Remake v0.7.14
 
 A competitive Minecraft PvP system for **Paper 1.21.11**, built with **Java 21** and **Gradle**. Create custom kits, send players into fast matchmaking, challenge rivals, and run block-editable arenas that reset between matches.
 
 ## Current version
 
-**SoulPvP v0.7.13**
+**Mcpvp-Remake v0.7.14**
 
 Implemented:
 - Main navigation GUI via `/menu` or `/mcpvp menu`.
@@ -21,7 +21,7 @@ Implemented:
 - Arena block placement and breaking inside configured regions, with arena restoration after matches.
 - Arena theme assignment with `/arena theme <name> <theme>`.
 - GitHub Actions builds and tag-triggered GitHub Releases with the JAR attached.
-- Persistent ELO ratings with Bronze, Silver, Gold, Diamond and Master tiers.
+- Persistent ELO ratings with MCPvP-style LT, MT and HT tiers (LT below 1400 ELO, MT from 1400, HT from 1700).
 - ELO updates only after ranked 1v1 matches; unranked matches do not change rating.
 - Separate persistent killstreaks and match win streaks, with separate best records.
 - `/settings` GUI with saved player visibility and scoreboard preferences.
@@ -137,7 +137,7 @@ The JAR is written to `build/libs/`.
 
 ## GitHub Releases
 
-Pushing a version tag such as `v0.7.9` triggers the release workflow. You can also publish manually from GitHub Actions using **Publish SoulPvP Release → Run workflow**, entering the version without the `v` prefix. The workflow builds the plugin and publishes a GitHub Release titled `SoulPvP vX.Y.Z`, with generated release notes, `SoulPvP-vX.Y.Z.jar` and a SHA-256 checksum attached. Normal pushes to `main` build the plugin and upload a temporary JAR artifact.
+Pushing a version tag such as `v0.7.9` triggers the release workflow. You can also publish manually from GitHub Actions using **Publish Mcpvp-Remake Release → Run workflow**, entering the version without the `v` prefix. The workflow builds the plugin and publishes a GitHub Release titled `Mcpvp-Remake vX.Y.Z`, with generated release notes, `Mcpvp-Remake-vX.Y.Z.jar` and a SHA-256 checksum attached. Normal pushes to `main` build the plugin and upload a temporary JAR artifact.
 
 ## Queue controls
 
