@@ -5,9 +5,9 @@ plugins {
 group = 'com.ogbonex'
 
 base {
-    archivesName = 'SoulPvP'
+    archivesName = 'Mcpvp-Remake'
 }
-version = providers.gradleProperty('releaseVersion').getOrElse('0.7.13')
+version = providers.gradleProperty('releaseVersion').getOrElse('0.7.14')
 
 repositories {
     mavenCentral()
