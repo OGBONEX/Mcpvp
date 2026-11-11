@@ -1023,15 +1023,14 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (!isLeader(leader.getUniqueId())) { msg(leader, "Only the party leader can split the party."); return; }
             LinkedHashSet<UUID> current = groups.get(leader.getUniqueId());
             if (current == null || current.size() < 2) { msg(leader, "You need at least 2 players to split a party."); return; }
-            List<UUID> shuffled = new ArrayList<>(current);
-            Collections.shuffle(shuffled);
-            List<UUID> first = new ArrayList<>(), second = new ArrayList<>();
-            for (int i = 0; i < shuffled.size(); i++) (i % 2 == 0 ? first : second).add(shuffled.get(i));
             UUID firstLeader = leader.getUniqueId();
-            if (!first.contains(firstLeader)) {
-                second.remove(firstLeader);
-                first.add(0, firstLeader);
-            }
+            List<UUID> shuffled = new ArrayList<>(current);
+            shuffled.remove(firstLeader);
+            Collections.shuffle(shuffled);
+            List<UUID> first = new ArrayList<>();
+            List<UUID> second = new ArrayList<>();
+            first.add(firstLeader);
+            for (int i = 0; i < shuffled.size(); i++) (i % 2 == 0 ? second : first).add(shuffled.get(i));
             UUID secondLeader = second.get(0);
             LinkedHashSet<UUID> teamA = new LinkedHashSet<>(first);
             LinkedHashSet<UUID> teamB = new LinkedHashSet<>(second);
