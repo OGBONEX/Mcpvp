@@ -33,9 +33,41 @@ public final class PvpProgressionManager {
 
     public String tier(UUID id) {
         int rating = elo(id);
-        if (rating >= 1700) return "HT";
-        if (rating >= 1400) return "MT";
-        return "LT";
+        String[] tiers = {
+            "HT1", "HT2", "HT3", "HT4", "HT5",
+            "MT1", "MT2", "MT3", "MT4", "MT5",
+            "LT1", "LT2", "LT3", "LT4", "LT5"
+        };
+        String[] keys = {
+            "ht1", "ht2", "ht3", "ht4", "ht5",
+            "mt1", "mt2", "mt3", "mt4", "mt5",
+            "lt1", "lt2", "lt3", "lt4", "lt5"
+        };
+        for (int i = 0; i < tiers.length; i++) {
+            int minimum = plugin.getConfig().getInt("elo-tiers.thresholds." + keys[i], defaultTierMinimum(keys[i]));
+            if (rating >= minimum) return tiers[i];
+        }
+        return "LT5";
+    }
+
+    private int defaultTierMinimum(String tier) {
+        return switch (tier) {
+            case "ht1" -> 1940;
+            case "ht2" -> 1880;
+            case "ht3" -> 1820;
+            case "ht4" -> 1760;
+            case "ht5" -> 1700;
+            case "mt1" -> 1640;
+            case "mt2" -> 1580;
+            case "mt3" -> 1520;
+            case "mt4" -> 1460;
+            case "mt5" -> 1400;
+            case "lt1" -> 1320;
+            case "lt2" -> 1240;
+            case "lt3" -> 1160;
+            case "lt4" -> 1080;
+            default -> 1000;
+        };
     }
 
     public void recordResult(Player winner, Player loser, String kit, boolean ranked) {
