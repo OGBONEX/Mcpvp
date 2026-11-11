@@ -1,4 +1,4 @@
-# SoulPvP v0.7.9
+# SoulPvP v0.7.10
 
 A competitive Minecraft PvP system for **Paper 1.21.11**, built with **Java 21** and **Gradle**. Create custom kits, send players into fast matchmaking, challenge rivals, and run block-editable arenas that reset between matches.
 
@@ -29,6 +29,7 @@ Implemented:
 - Recent match history via `/history`.
 - Rematch requests with `/rematch` and `/rematch accept`.
 - `/elo` and `/streak` player commands.
+- Party management with invitations, leader transfer, member removal, party chat and configurable size limit.
 
 ## GUI navigation
 
@@ -54,6 +55,20 @@ Implemented:
 - `/settings` — opens personal settings for player visibility and the scoreboard.
 - `/ffa join <arena> <kit>` — join a configured free-for-all arena.
 - `/ffa leave` — restore your inventory and return to your previous location.
+
+## Party commands
+
+- `/party create` — create a party.
+- `/party invite <player>` — invite an online player (leader only; invitations expire after 60 seconds).
+- `/party accept` — accept an invitation.
+- `/party info` — show members and the party leader.
+- `/party leave` — leave your current party; leadership transfers to the next member if the leader leaves.
+- `/party kick <player>` — remove a member (leader only).
+- `/party disband` — disband the party (leader only).
+- `/party chat <message>` — send a message to party members.
+- Configure `party.max-size` in `config.yml` (default: 8).
+
+Party management is currently separate from matchmaking; party-vs-party team matches are not included yet.
 
 ## Match commands
 
