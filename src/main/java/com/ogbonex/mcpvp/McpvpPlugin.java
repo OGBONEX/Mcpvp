@@ -39,6 +39,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     private PvpProgressionManager progression;
     private PlayerSettingsManager playerSettings;
     private FfaManager ffa;
+    private PartyManager parties;
     private Location lobby;
 
     @Override public void onEnable() {
@@ -54,6 +55,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         progression = new PvpProgressionManager(this);
         playerSettings = new PlayerSettingsManager();
         ffa = new FfaManager();
+        parties = new PartyManager();
         displays = new LobbyDisplayManager(this, id -> stats.get(id, "wins"), ranks::getRank, id -> playerSettings.enabled(id, "scoreboard", true));
         Bukkit.getScheduler().runTaskTimer(this, displays::refreshAll, 20L, 20L);
         loadLobby();
@@ -64,6 +66,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         bind("leave", new LeaveCommand());
         bind("settings", new SettingsCommand());
         bind("ffa", new FfaCommand());
+        bind("party", new PartyCommand());
         bind("mcpvp", new MainCommand());
         bind("stats", new StatsCommand());
         bind("duel", new DuelCommand());
@@ -149,6 +152,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         duels.clearFor(event.getPlayer().getUniqueId());
         spectators.restore(event.getPlayer());
         ffa.handleQuit(event.getPlayer());
+        parties.handleQuit(event.getPlayer());
         matches.handleQuit(event.getPlayer());
     }
     @EventHandler public void onRespawn(PlayerRespawnEvent event) {
@@ -875,6 +879,160 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             button(menu, 14, Material.GOLD_INGOT, "Top Players", "leaderboard", "View the wins leaderboard.");
             button(menu, 16, Material.MAP, "Arena List", "arenas", "View available arena records.");
             player.openInventory(menu);
+            return true;
+        }
+    }
+
+    private final class PartyManager {
+        private final Map<UUID, LinkedHashSet<UUID>> groups = new HashMap<>();
+        private final Map<UUID, UUID> invitations = new HashMap<>();
+        private final Map<UUID, Long> invitedAt = new HashMap<>();
+        private UUID partyOf(UUID member) {
+            for (Map.Entry<UUID, LinkedHashSet<UUID>> entry : groups.entrySet())
+                if (entry.getValue().contains(member)) return entry.getKey();
+            return null;
+        }
+        boolean hasParty(UUID member) { return partyOf(member) != null; }
+        boolean isLeader(UUID member) { UUID leader = partyOf(member); return leader != null && leader.equals(member); }
+        LinkedHashSet<UUID> members(UUID member) {
+            UUID leader = partyOf(member);
+            return leader == null ? new LinkedHashSet<>() : new LinkedHashSet<>(groups.get(leader));
+        }
+        void create(Player leader) {
+            if (hasParty(leader.getUniqueId())) { msg(leader, "You are already in a party."); return; }
+            LinkedHashSet<UUID> members = new LinkedHashSet<>();
+            members.add(leader.getUniqueId());
+            groups.put(leader.getUniqueId(), members);
+            msg(leader, "Party created. Invite players with /party invite <player>.");
+        }
+        void invite(Player leader, Player target) {
+            if (!isLeader(leader.getUniqueId())) { msg(leader, "Only the party leader can invite players."); return; }
+            if (target.equals(leader)) { msg(leader, "You cannot invite yourself."); return; }
+            if (hasParty(target.getUniqueId())) { msg(leader, "That player is already in a party."); return; }
+            LinkedHashSet<UUID> members = groups.get(leader.getUniqueId());
+            int max = Math.max(2, getConfig().getInt("party.max-size", 8));
+            if (members.size() >= max) { msg(leader, "Your party is full (maximum " + max + ")."); return; }
+            invitations.put(target.getUniqueId(), leader.getUniqueId());
+            invitedAt.put(target.getUniqueId(), System.currentTimeMillis());
+            msg(leader, "Party invitation sent to " + target.getName() + ".");
+            msg(target, leader.getName() + " invited you to a party. Use /party accept within 60 seconds.");
+        }
+        void accept(Player target) {
+            UUID id = target.getUniqueId(), leaderId = invitations.remove(id);
+            Long created = invitedAt.remove(id);
+            if (leaderId == null || created == null || System.currentTimeMillis() - created > 60_000L) {
+                msg(target, "You do not have a valid party invitation."); return;
+            }
+            Player leader = Bukkit.getPlayer(leaderId);
+            LinkedHashSet<UUID> members = groups.get(leaderId);
+            if (leader == null || members == null || hasParty(id)) {
+                msg(target, "That party is no longer available."); return;
+            }
+            int max = Math.max(2, getConfig().getInt("party.max-size", 8));
+            if (members.size() >= max) { msg(target, "That party is now full."); return; }
+            members.add(id);
+            broadcast(leaderId, target.getName() + " joined the party.");
+        }
+        void leave(Player player) {
+            UUID id = player.getUniqueId(), leader = partyOf(id);
+            if (leader == null) { msg(player, "You are not in a party."); return; }
+            LinkedHashSet<UUID> members = groups.get(leader);
+            members.remove(id);
+            if (members.isEmpty()) groups.remove(leader);
+            else if (leader.equals(id)) {
+                UUID next = members.iterator().next();
+                groups.remove(leader);
+                groups.put(next, members);
+                broadcast(next, "Party leader transferred to " + Bukkit.getOfflinePlayer(next).getName() + ".");
+            } else broadcast(leader, player.getName() + " left the party.");
+            msg(player, "You left the party.");
+        }
+        void kick(Player leader, Player target) {
+            if (!isLeader(leader.getUniqueId())) { msg(leader, "Only the party leader can kick members."); return; }
+            if (leader.equals(target) || !groups.get(leader.getUniqueId()).remove(target.getUniqueId())) {
+                msg(leader, "That player is not in your party."); return;
+            }
+            msg(target, "You were removed from the party.");
+            broadcast(leader.getUniqueId(), target.getName() + " was removed from the party.");
+        }
+        void disband(Player leader) {
+            if (!isLeader(leader.getUniqueId())) { msg(leader, "Only the party leader can disband the party."); return; }
+            LinkedHashSet<UUID> members = groups.remove(leader.getUniqueId());
+            if (members != null) for (UUID id : members) {
+                Player online = Bukkit.getPlayer(id);
+                if (online != null) msg(online, "The party was disbanded.");
+            }
+        }
+        void chat(Player sender, String message) {
+            UUID leader = partyOf(sender.getUniqueId());
+            if (leader == null) { msg(sender, "You are not in a party."); return; }
+            for (UUID id : groups.get(leader)) {
+                Player online = Bukkit.getPlayer(id);
+                if (online != null) online.sendMessage(ChatColor.LIGHT_PURPLE + "[Party] " + sender.getName() + ": " + ChatColor.WHITE + message);
+            }
+        }
+        void info(Player player) {
+            UUID leader = partyOf(player.getUniqueId());
+            if (leader == null) { msg(player, "You are not in a party. Create one with /party create."); return; }
+            List<String> names = new ArrayList<>();
+            for (UUID id : groups.get(leader)) names.add((id.equals(leader) ? "[Leader] " : "") + Optional.ofNullable(Bukkit.getOfflinePlayer(id).getName()).orElse(id.toString()));
+            msg(player, "Party (" + names.size() + "/" + Math.max(2, getConfig().getInt("party.max-size", 8)) + "): " + String.join(", ", names));
+        }
+        void broadcast(UUID leader, String message) {
+            LinkedHashSet<UUID> members = groups.get(leader);
+            if (members == null) return;
+            for (UUID id : members) {
+                Player online = Bukkit.getPlayer(id);
+                if (online != null) msg(online, message);
+            }
+        }
+        void handleQuit(Player player) {
+            UUID id = player.getUniqueId();
+            invitations.remove(id); invitedAt.remove(id);
+            UUID leader = partyOf(id);
+            if (leader == null) return;
+            LinkedHashSet<UUID> members = groups.get(leader);
+            members.remove(id);
+            if (members.isEmpty()) groups.remove(leader);
+            else if (leader.equals(id)) {
+                UUID next = members.iterator().next();
+                groups.remove(leader); groups.put(next, members);
+                broadcast(next, "Party leader transferred because the leader disconnected.");
+            } else broadcast(leader, player.getName() + " disconnected and left the party.");
+        }
+    }
+
+    private final class PartyCommand implements CommandExecutor {
+        public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+            if (!(sender instanceof Player player)) { msg(sender, "Players only."); return true; }
+            if (args.length == 0 || args[0].equalsIgnoreCase("info")) { parties.info(player); return true; }
+            switch (args[0].toLowerCase(Locale.ROOT)) {
+                case "create" -> parties.create(player);
+                case "invite" -> {
+                    if (args.length != 2) msg(player, "Usage: /party invite <player>");
+                    else {
+                        Player target = Bukkit.getPlayerExact(args[1]);
+                        if (target == null) msg(player, "That player is not online.");
+                        else parties.invite(player, target);
+                    }
+                }
+                case "accept" -> parties.accept(player);
+                case "leave" -> parties.leave(player);
+                case "kick" -> {
+                    if (args.length != 2) msg(player, "Usage: /party kick <player>");
+                    else {
+                        Player target = Bukkit.getPlayerExact(args[1]);
+                        if (target == null) msg(player, "That player is not online.");
+                        else parties.kick(player, target);
+                    }
+                }
+                case "disband" -> parties.disband(player);
+                case "chat" -> {
+                    if (args.length < 2) msg(player, "Usage: /party chat <message>");
+                    else parties.chat(player, String.join(" ", Arrays.copyOfRange(args, 1, args.length)));
+                }
+                default -> msg(player, "Party commands: /party create, invite <player>, accept, leave, kick <player>, disband, info, chat <message>");
+            }
             return true;
         }
     }
