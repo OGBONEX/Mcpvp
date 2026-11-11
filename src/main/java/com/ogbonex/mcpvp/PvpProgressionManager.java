@@ -33,11 +33,9 @@ public final class PvpProgressionManager {
 
     public String tier(UUID id) {
         int rating = elo(id);
-        if (rating >= 2000) return "Master";
-        if (rating >= 1700) return "Diamond";
-        if (rating >= 1400) return "Gold";
-        if (rating >= 1150) return "Silver";
-        return "Bronze";
+        if (rating >= 1700) return "HT";
+        if (rating >= 1400) return "MT";
+        return "LT";
     }
 
     public void recordResult(Player winner, Player loser, String kit, boolean ranked) {
