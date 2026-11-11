@@ -62,7 +62,7 @@ final class LobbyDisplayManager {
                 color("&f "),
                 color("&eRank: &f" + rank),
                 color("&eWins: &f" + count),
-                color("&eQueue: &f" + plugin.getConfig().getString("scoreboard.queue-label", "Use /kits")),
+                color("&eQueue: &f" + plugin.getConfig().getString("scoreboard.queue-label", "Use /queue")),
                 color("&a "),
                 color("&7MCPvP Network")
         );
