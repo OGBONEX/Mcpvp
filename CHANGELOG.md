@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.7.9
+- Added free-for-all sessions with `/ffa join <arena> <kit>` and `/ffa leave`.
+- FFA restores the player's saved inventory, armor, location and game settings when they leave.
+- FFA players keep their kit on respawn and return to the FFA spawn.
+- FFA sessions end safely on disconnect and restore the player's snapshot when they next join.
+
 ## v0.7.8
 - Added separate Ranked and Unranked matchmaking queues for each kit.
 - Added a queue-mode choice GUI after selecting a kit.
