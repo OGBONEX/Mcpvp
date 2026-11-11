@@ -21,7 +21,7 @@ Implemented:
 - Arena block placement and breaking inside configured regions, with arena restoration after matches.
 - Arena theme assignment with `/arena theme <name> <theme>`.
 - GitHub Actions builds and tag-triggered GitHub Releases with the JAR attached.
-- Persistent ELO ratings with MCPvP-style LT, MT and HT tiers (LT below 1400 ELO, MT from 1400, HT from 1700).
+- Persistent ELO ratings with 15 automatically assigned MCPvP-style divisions: LT5–LT1, MT5–MT1 and HT5–HT1. Division thresholds are configurable in `config.yml` under `elo-tiers.thresholds`.
 - ELO updates only after ranked 1v1 matches; unranked matches do not change rating.
 - Separate persistent killstreaks and match win streaks, with separate best records.
 - `/settings` GUI with saved player visibility and scoreboard preferences.
@@ -31,6 +31,15 @@ Implemented:
 - `/elo` and `/streak` player commands.
 - Party management with invitations, leader transfer, member removal, party chat and configurable size limit.
 - Persistent achievements for wins, kills, ELO milestones and killstreaks, with achievement points.
+
+### ELO divisions
+
+Players are automatically assigned one of 15 divisions based on their current ELO:
+- LT5, LT4, LT3, LT2, LT1
+- MT5, MT4, MT3, MT2, MT1
+- HT5, HT4, HT3, HT2, HT1
+
+Division 5 is the entry division in each group; division 1 is the highest. Default minimum ELO thresholds are configurable in `elo-tiers.thresholds` in `config.yml`. Ranked match results update ELO and therefore update a player's displayed division automatically.
 
 ## GUI navigation
 
