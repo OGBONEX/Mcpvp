@@ -15,6 +15,7 @@ public final class PvpProgressionManager {
     private final YamlConfiguration data;
     private final Map<UUID, RematchRequest> recent = new HashMap<>();
     private final Map<UUID, RematchRequest> pending = new HashMap<>();
+    private final Map<UUID, Long> pendingAt = new HashMap<>();
 
     public record RematchRequest(UUID opponent, String kit) {}
 
@@ -62,6 +63,7 @@ public final class PvpProgressionManager {
     public void recordLoss(Player loser, Player winner, String kit) {
         UUID id = loser.getUniqueId();
         data.set(id + ".winstreak", 0);
+        data.set(id + ".killstreak", 0);
         if (winner != null) {
             recent.put(id, new RematchRequest(winner.getUniqueId(), kit));
             recent.put(winner.getUniqueId(), new RematchRequest(id, kit));
@@ -99,8 +101,14 @@ public final class PvpProgressionManager {
     public RematchRequest rematch(UUID id) { return recent.get(id); }
     public void pendingRematch(UUID target, UUID challenger, String kit) {
         pending.put(target, new RematchRequest(challenger, kit));
+        pendingAt.put(target, System.currentTimeMillis());
     }
-    public RematchRequest takePendingRematch(UUID id) { return pending.remove(id); }
+    public RematchRequest takePendingRematch(UUID id) {
+        Long created = pendingAt.remove(id);
+        RematchRequest request = pending.remove(id);
+        if (created == null || System.currentTimeMillis() - created > 30_000L) return null;
+        return request;
+    }
 
     private void save() {
         try { data.save(file); }
