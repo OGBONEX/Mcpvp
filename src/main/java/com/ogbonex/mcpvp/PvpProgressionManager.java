@@ -25,8 +25,10 @@ public final class PvpProgressionManager {
     }
 
     public int elo(UUID id) { return data.getInt(id + ".elo", 1000); }
-    public int streak(UUID id) { return data.getInt(id + ".streak", 0); }
-    public int bestStreak(UUID id) { return data.getInt(id + ".best-streak", 0); }
+    public int streak(UUID id) { return data.getInt(id + ".killstreak", 0); }
+    public int bestStreak(UUID id) { return data.getInt(id + ".best-killstreak", 0); }
+    public int winStreak(UUID id) { return data.getInt(id + ".winstreak", 0); }
+    public int bestWinStreak(UUID id) { return data.getInt(id + ".best-winstreak", 0); }
 
     public String tier(UUID id) {
         int rating = elo(id);
@@ -46,9 +48,9 @@ public final class PvpProgressionManager {
         int loserDelta = (int)Math.round(32 * (0.0 - expectedLoser));
         data.set(win + ".elo", oldWinner + winnerDelta);
         data.set(lose + ".elo", Math.max(0, oldLoser + loserDelta));
-        int current = streak(win) + 1;
-        data.set(win + ".streak", current);
-        data.set(win + ".best-streak", Math.max(bestStreak(win), current));
+        int current = winStreak(win) + 1;
+        data.set(win + ".winstreak", current);
+        data.set(win + ".best-winstreak", Math.max(bestWinStreak(win), current));
         recent.put(win, new RematchRequest(lose, kit));
         recent.put(lose, new RematchRequest(win, kit));
         addHistory(win, "W vs " + loser.getName() + " (" + kit + ") +" + winnerDelta);
@@ -59,7 +61,7 @@ public final class PvpProgressionManager {
 
     public void recordLoss(Player loser, Player winner, String kit) {
         UUID id = loser.getUniqueId();
-        data.set(id + ".streak", 0);
+        data.set(id + ".winstreak", 0);
         if (winner != null) {
             recent.put(id, new RematchRequest(winner.getUniqueId(), kit));
             recent.put(winner.getUniqueId(), new RematchRequest(id, kit));
@@ -71,14 +73,14 @@ public final class PvpProgressionManager {
     public void recordKill(Player player) {
         UUID id = player.getUniqueId();
         int value = streak(id) + 1;
-        data.set(id + ".streak", value);
-        data.set(id + ".best-streak", Math.max(bestStreak(id), value));
+        data.set(id + ".killstreak", value);
+        data.set(id + ".best-killstreak", Math.max(bestStreak(id), value));
         save();
         if (value > 0 && value % 5 == 0) player.sendMessage(ChatColor.GOLD + "Killstreak: " + value + "!");
     }
 
     public void recordDeath(Player player) {
-        data.set(player.getUniqueId() + ".streak", 0);
+        data.set(player.getUniqueId() + ".killstreak", 0);
         save();
     }
 
