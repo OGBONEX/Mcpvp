@@ -72,7 +72,7 @@ Implemented:
 - `/party leave` — leave your current party; leadership transfers to the next member if the leader leaves.
 - `/party kick <player>` — remove a member (leader only).
 - `/party disband` — disband the party (leader only).
-- `/party split` — randomly divide the party into two balanced, separate parties; the original leader stays in Team A.
+- `/party split` — randomly divide the party into two balanced, separate parties, keeping the original leader in Team A; the original leader stays in Team A.
 - `/party ffa <arena> <kit>` — send every online party member into the same FFA arena and kit (leader only). All members must be free of matches, queues and other FFA sessions.
 - `/party chat <message>` — send a message to party members.
 - Configure `party.max-size` in `config.yml` (default: 8).
