@@ -1,6 +1,24 @@
 # Mcpvp-Remake configuration
 party:
   max-size: 8
+elo-tiers:
+  # Minimum ELO required for each division. Higher divisions take priority.
+  thresholds:
+    lt5: 1000
+    lt4: 1080
+    lt3: 1160
+    lt2: 1240
+    lt1: 1320
+    mt5: 1400
+    mt4: 1460
+    mt3: 1520
+    mt2: 1580
+    mt1: 1640
+    ht5: 1700
+    ht4: 1760
+    ht3: 1820
+    ht2: 1880
+    ht1: 1940
 settings:
   debug: false
   queue:
