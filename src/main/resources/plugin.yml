@@ -24,6 +24,9 @@ commands:
   settings:
     description: Open your player settings
     usage: /settings
+  ffa:
+    description: Join or leave free-for-all arenas
+    usage: /ffa <join|leave>
   stats:
     description: View player match statistics and leaderboard
     usage: /stats [player|top [wins|kills]]
