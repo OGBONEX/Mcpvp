@@ -30,6 +30,9 @@ commands:
   party:
     description: Create and manage player parties
     usage: /party <create|invite|accept|leave|kick|disband|info|chat>
+  achievements:
+    description: View unlocked PvP achievements and points
+    usage: /achievements
   stats:
     description: View player match statistics and leaderboard
     usage: /stats [player|top [wins|kills]]
