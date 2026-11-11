@@ -15,12 +15,14 @@ final class LobbyDisplayManager {
     private final JavaPlugin plugin;
     private final java.util.function.Function<UUID, String> ranks;
     private final java.util.function.ToIntFunction<UUID> wins;
+    private final java.util.function.Predicate<UUID> scoreboardEnabled;
     private final Map<UUID, Scoreboard> boards = new HashMap<>();
 
-    LobbyDisplayManager(JavaPlugin plugin, java.util.function.ToIntFunction<UUID> wins, java.util.function.Function<UUID, String> ranks) {
+    LobbyDisplayManager(JavaPlugin plugin, java.util.function.ToIntFunction<UUID> wins, java.util.function.Function<UUID, String> ranks, java.util.function.Predicate<UUID> scoreboardEnabled) {
         this.plugin = plugin;
         this.wins = wins;
         this.ranks = ranks;
+        this.scoreboardEnabled = scoreboardEnabled;
     }
 
     String rankName(UUID playerId) { return ranks.apply(playerId); }
@@ -44,7 +46,7 @@ final class LobbyDisplayManager {
                 color(plugin.getConfig().getString("tab.footer", "&eOnline: &f%online%"))
                         .replace("%online%", String.valueOf(Bukkit.getOnlinePlayers().size())));
 
-        if (!plugin.getConfig().getBoolean("scoreboard.enabled", true)) {
+        if (!plugin.getConfig().getBoolean("scoreboard.enabled", true) || !scoreboardEnabled.test(player.getUniqueId())) {
             player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
             boards.remove(player.getUniqueId());
             return;
