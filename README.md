@@ -1,10 +1,10 @@
-# MCPvP v0.7.8
+# MCPvP v0.7.9
 
 A competitive Minecraft PvP system for **Paper 1.21.11**, built with **Java 21** and **Gradle**. Create custom kits, send players into fast matchmaking, challenge rivals, and run block-editable arenas that reset between matches.
 
 ## Current version
 
-**MCPvP v0.7.8**
+**MCPvP v0.7.9**
 
 Implemented:
 - Main navigation GUI via `/menu` or `/mcpvp menu`.
@@ -12,7 +12,7 @@ Implemented:
 - Kit icons automatically use the first non-empty item in the creator's inventory.
 - Admins can customize icons with `/kit icon <name> <material>`.
 - Inventory-based kit creation, listing, deletion and giving.
-- Separate ranked and unranked same-kit 1v1 matchmaking, duel requests and spectator mode.
+- Separate ranked and unranked same-kit 1v1 matchmaking, FFA arenas, duel requests and spectator mode.
 - Match restoration, wins/losses and player statistics.
 - 80 named arena preset records across 14 themes.
 - Configurable tab list and sidebar scoreboard, including persistent role ranks.
@@ -52,6 +52,8 @@ Implemented:
 - `/queue status` — shows your current kit, mode, position and waiting count.
 - `/queue status <kit>` — checks the number of players waiting for a kit.
 - `/settings` — opens personal settings for player visibility and the scoreboard.
+- `/ffa join <arena> <kit>` — join a configured free-for-all arena.
+- `/ffa leave` — restore your inventory and return to your previous location.
 
 ## Match commands
 
@@ -75,7 +77,7 @@ Implemented:
 4. Set player spawns with `/arena setspawn <name> a` and `/arena setspawn <name> b`.
 5. Create kits and let players queue.
 
-Only arenas with both spawn points and both region corners configured are eligible for matchmaking. An arena is reserved while a match is active. The 80 preset records are not prebuilt world downloads; admins must build/import the actual maps.
+Only arenas with both spawn points and both region corners configured are eligible for 1v1 matchmaking. FFA requires `spawn-a` and both region corners. An arena is reserved while a match is active. The 80 preset records are not prebuilt world downloads; admins must build/import the actual maps.
 
 ### Arena restoration
 
