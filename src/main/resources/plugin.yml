@@ -27,6 +27,9 @@ commands:
   ffa:
     description: Join or leave free-for-all arenas
     usage: /ffa <join|leave>
+  party:
+    description: Create and manage player parties
+    usage: /party <create|invite|accept|leave|kick|disband|info|chat>
   stats:
     description: View player match statistics and leaderboard
     usage: /stats [player|top [wins|kills]]
