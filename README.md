@@ -1,10 +1,10 @@
-# MCPvP v0.7.7
+# MCPvP v0.7.8
 
 A competitive Minecraft PvP system for **Paper 1.21.11**, built with **Java 21** and **Gradle**. Create custom kits, send players into fast matchmaking, challenge rivals, and run block-editable arenas that reset between matches.
 
 ## Current version
 
-**MCPvP v0.7.7**
+**MCPvP v0.7.8**
 
 Implemented:
 - Main navigation GUI via `/menu` or `/mcpvp menu`.
@@ -12,7 +12,7 @@ Implemented:
 - Kit icons automatically use the first non-empty item in the creator's inventory.
 - Admins can customize icons with `/kit icon <name> <material>`.
 - Inventory-based kit creation, listing, deletion and giving.
-- Same-kit 1v1 matchmaking, duel requests and spectator mode.
+- Separate ranked and unranked same-kit 1v1 matchmaking, duel requests and spectator mode.
 - Match restoration, wins/losses and player statistics.
 - 80 named arena preset records across 14 themes.
 - Configurable tab list and sidebar scoreboard, including persistent role ranks.
@@ -22,7 +22,7 @@ Implemented:
 - Arena theme assignment with `/arena theme <name> <theme>`.
 - GitHub Actions builds and tag-triggered GitHub Releases with the JAR attached.
 - Persistent ELO ratings with Bronze, Silver, Gold, Diamond and Master tiers.
-- ELO updates after completed 1v1 matches.
+- ELO updates only after ranked 1v1 matches; unranked matches do not change rating.
 - Separate persistent killstreaks and match win streaks, with separate best records.
 - `/settings` GUI with saved player visibility and scoreboard preferences.
 - `/leave` is registered and removes the player from matchmaking.
@@ -44,10 +44,12 @@ Implemented:
 - `/kit delete <name>` — deletes a kit (admin).
 - `/kit give <player> <name>` — gives a saved kit to a player (admin).
 - `/queue` — opens the queue GUI.
-- `/queue join <kit>` — joins that kit's matchmaking queue.
+- `/queue join <kit>` — joins that kit's unranked matchmaking queue.
+- `/queue ranked <kit>` or `/queue unranked <kit>` — joins the selected queue mode.
+- Selecting a kit in `/queue` opens a Ranked / Unranked choice menu.
 - `/leave` or `/queue leave` — leaves matchmaking.
 - Clicking the same kit again in the queue GUI leaves that queue.
-- `/queue status` — shows your current kit, position and waiting count.
+- `/queue status` — shows your current kit, mode, position and waiting count.
 - `/queue status <kit>` — checks the number of players waiting for a kit.
 - `/settings` — opens personal settings for player visibility and the scoreboard.
 
