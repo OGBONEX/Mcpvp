@@ -1,4 +1,4 @@
-name: Publish SoulPvP Release
+name: Publish Mcpvp-Remake Release
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to publish, without the v prefix (example: 0.7.9)'
+        description: 'Version to publish, without the v prefix (example: 0.7.14)'
         required: true
         type: string
 
@@ -59,7 +59,7 @@ jobs:
             echo "No plugin JAR was produced."
             exit 1
           fi
-          cp "$JAR" "dist/SoulPvP-v${{ steps.version.outputs.version }}.jar"
+          cp "$JAR" "dist/Mcpvp-Remake-v${{ steps.version.outputs.version }}.jar"
           cd dist
           sha256sum *.jar > SHA256SUMS.txt
 
@@ -68,9 +68,9 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           target_commitish: main
-          name: SoulPvP v${{ steps.version.outputs.version }}
+          name: Mcpvp-Remake v${{ steps.version.outputs.version }}
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            dist/SoulPvP-v${{ steps.version.outputs.version }}.jar
+            dist/Mcpvp-Remake-v${{ steps.version.outputs.version }}.jar
             dist/SHA256SUMS.txt
