@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.7.12
+- Fixed an achievement progress display compile error.
+
 ## v0.7.11
 - Added persistent PvP achievements for match wins, kills, ELO milestones and killstreak milestones.
 - Added achievement point values and `/achievements` progress listing.
