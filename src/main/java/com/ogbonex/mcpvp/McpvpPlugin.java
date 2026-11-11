@@ -161,6 +161,19 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             new SettingsCommand().onCommand(player, null, "settings", new String[0]);
             return;
         }
+        if (title.equals("MCPvP Queue Mode")) {
+            event.setCancelled(true);
+            if (event.getClickedInventory() == null || !event.getClickedInventory().equals(event.getView().getTopInventory())) return;
+            ItemStack selected = event.getCurrentItem();
+            if (selected == null || !selected.hasItemMeta()) return;
+            String action = selected.getItemMeta().getPersistentDataContainer().get(new org.bukkit.NamespacedKey(this, "queue-mode"), org.bukkit.persistence.PersistentDataType.STRING);
+            if (action == null) return;
+            String[] parts = action.split("\\\\|", 2);
+            if (parts.length != 2) return;
+            player.closeInventory();
+            queues.join(player, parts[1], parts[0].equals("ranked"));
+            return;
+        }
         if (title.equals("MCPvP Menu")) {
             event.setCancelled(true);
             ItemStack selected = event.getCurrentItem();
@@ -185,7 +198,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             queues.leave(player.getUniqueId());
             msg(player, "You left the " + kit + " queue.");
         } else {
-            queues.join(player, kit);
+            openQueueModeMenu(player, kit);
         }
     }
     @EventHandler public void onJoin(PlayerJoinEvent event) {
@@ -193,6 +206,24 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             matches.restorePending(event.getPlayer());
             for (Player online : Bukkit.getOnlinePlayers()) playerSettings.apply(online);
         }, 1L);
+    }
+
+    private void openQueueModeMenu(Player player, String kit) {
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.DARK_AQUA + "MCPvP Queue Mode");
+        ItemStack ranked = new ItemStack(Material.DIAMOND_SWORD);
+        ItemMeta rankedMeta = ranked.getItemMeta();
+        rankedMeta.setDisplayName(ChatColor.GOLD + "Ranked Queue");
+        rankedMeta.setLore(List.of(ChatColor.GRAY + "ELO changes after the match", ChatColor.DARK_GRAY + "Kit: " + kit, ChatColor.DARK_GRAY + "Waiting: " + queues.count(kit, true)));
+        rankedMeta.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(this, "queue-mode"), org.bukkit.persistence.PersistentDataType.STRING, "ranked|" + kit);
+        ranked.setItemMeta(rankedMeta);
+        ItemStack unranked = new ItemStack(Material.IRON_SWORD);
+        ItemMeta unrankedMeta = unranked.getItemMeta();
+        unrankedMeta.setDisplayName(ChatColor.GREEN + "Unranked Queue");
+        unrankedMeta.setLore(List.of(ChatColor.GRAY + "No ELO changes", ChatColor.DARK_GRAY + "Kit: " + kit, ChatColor.DARK_GRAY + "Waiting: " + queues.count(kit, false)));
+        unrankedMeta.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(this, "queue-mode"), org.bukkit.persistence.PersistentDataType.STRING, "unranked|" + kit);
+        unranked.setItemMeta(unrankedMeta);
+        inv.setItem(11, ranked); inv.setItem(15, unranked);
+        player.openInventory(inv);
     }
 
     private final class KitManager {
@@ -366,19 +397,20 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             }
         }
         private final class Match {
-            final UUID one, two; final String kit, arena; WorldBorder border; Map<String,BlockState> arenaSnapshot;
-            Match(Player a, Player b, String kit, String arena) {
-                one=a.getUniqueId(); two=b.getUniqueId(); this.kit=kit; this.arena=arena;
+            final UUID one, two; final String kit, arena; final boolean ranked; WorldBorder border; Map<String,BlockState> arenaSnapshot;
+            Match(Player a, Player b, String kit, String arena, boolean ranked) {
+                one=a.getUniqueId(); two=b.getUniqueId(); this.kit=kit; this.arena=arena; this.ranked=ranked;
             }
             UUID opponent(UUID id) { return one.equals(id) ? two : one; }
         }
-        boolean start(Player a, Player b, String kit) {
+        boolean start(Player a, Player b, String kit) { return start(a, b, kit, false); }
+        boolean start(Player a, Player b, String kit, boolean ranked) {
             String arena = arenas.firstReady();
             if (arena == null) { msg(a, "No ready arena. An admin must set both spawns and both arena region corners."); msg(b, "No ready arena is configured."); return false; }
             Location sa=arenas.get(arena,"spawn-a"), sb=arenas.get(arena,"spawn-b");
             if (sa == null || sb == null) return false;
             snapshots.put(a.getUniqueId(), new Snapshot(a)); snapshots.put(b.getUniqueId(), new Snapshot(b));
-            Match match = new Match(a,b,kit,arena); active.put(match.one,match); active.put(match.two,match);
+            Match match = new Match(a,b,kit,arena,ranked); active.put(match.one,match); active.put(match.two,match);
             if (!arenas.reserve(arena)) {
                 active.remove(match.one); active.remove(match.two);
                 snapshots.remove(match.one); snapshots.remove(match.two);
@@ -423,12 +455,12 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (winner != null) {
                 stats.add(winner.getUniqueId(),"wins",1);
                 stats.add(winner.getUniqueId(),"kills",1);
-                progression.recordResult(winner, loser, m.kit);
+                progression.recordResult(winner, loser, m.kit, m.ranked);
                 winner.sendMessage(ChatColor.GREEN + "You won the " + m.kit + " match!");
             }
             stats.add(loser.getUniqueId(),"losses",1);
             stats.add(loser.getUniqueId(),"deaths",1);
-            progression.recordLoss(loser, winner, m.kit);
+            progression.recordLoss(loser, winner, m.kit, m.ranked);
             active.remove(m.one); active.remove(m.two);
             restoreArena(m);
             arenas.release(m.arena);
@@ -448,8 +480,8 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         void handleQuit(Player player) {
             Match m = active.get(player.getUniqueId()); if (m == null) return;
             Player winner = Bukkit.getPlayer(m.opponent(player.getUniqueId()));
-            if (winner != null) { stats.add(winner.getUniqueId(),"wins",1); stats.add(winner.getUniqueId(),"kills",1); progression.recordResult(winner, player, m.kit); winner.sendMessage(ChatColor.GREEN + "Opponent left. You win!"); }
-            stats.add(player.getUniqueId(),"losses",1); stats.add(player.getUniqueId(),"deaths",1); progression.recordLoss(player, winner, m.kit); finish(m);
+            if (winner != null) { stats.add(winner.getUniqueId(),"wins",1); stats.add(winner.getUniqueId(),"kills",1); progression.recordResult(winner, player, m.kit, m.ranked); winner.sendMessage(ChatColor.GREEN + "Opponent left. You win!"); }
+            stats.add(player.getUniqueId(),"losses",1); stats.add(player.getUniqueId(),"deaths",1); progression.recordLoss(player, winner, m.kit, m.ranked); finish(m);
         }
         void finish(Match m) {
             active.remove(m.one); active.remove(m.two);
@@ -523,7 +555,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (opponent == null || !opponent.isOnline()) { msg(player, "Your previous opponent is not online."); return false; }
             if (inMatch(player.getUniqueId()) || inMatch(opponent.getUniqueId())) { msg(player, "Both players must be outside a match."); return false; }
             msg(opponent, player.getName() + " requested a rematch. They can accept with /rematch accept.");
-            progression.pendingRematch(opponent.getUniqueId(), player.getUniqueId(), request.kit());
+            progression.pendingRematch(opponent.getUniqueId(), player.getUniqueId(), request.kit(), request.ranked());
             msg(player, "Rematch request sent to " + opponent.getName() + ".");
             return true;
         }
@@ -532,7 +564,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             if (request == null) { msg(player, "You have no pending rematch."); return false; }
             Player challenger = Bukkit.getPlayer(request.opponent());
             if (challenger == null || !challenger.isOnline() || inMatch(challenger.getUniqueId()) || inMatch(player.getUniqueId())) { msg(player, "The rematch is no longer available."); return false; }
-            return start(challenger, player, request.kit());
+            return start(challenger, player, request.kit(), request.ranked());
         }
         Player opponent(Player player) {
             Match m = active.get(player.getUniqueId());
@@ -616,37 +648,50 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
 
     private final class QueueManager {
         private final Map<String, LinkedList<UUID>> waiting = new HashMap<>();
-        void join(Player player, String kit) {
-            if (!kits.exists(kit)) { msg(player,"Unknown kit. Use /kit list."); return; }
-            if (matches.inMatch(player.getUniqueId())) { msg(player,"You are already in a match."); return; }
-            String current = queuedKit(player.getUniqueId());
-            if (current != null && current.equalsIgnoreCase(kit)) {
-                msg(player, "You are already queued for " + kit + " (position " + position(player.getUniqueId()) + "). Use /leave to leave.");
-                return;
+        private String key(String kit, boolean ranked) { return (ranked ? "ranked:" : "unranked:") + clean(kit); }
+        boolean join(Player player, String kit) { return join(player, kit, false); }
+        boolean join(Player player, String kit, boolean ranked) {
+            if (!kits.exists(kit)) { msg(player, "Unknown kit. Use /kit list."); return false; }
+            if (matches.inMatch(player.getUniqueId())) { msg(player, "You are already in a match."); return false; }
+            String queueKey = key(kit, ranked);
+            String currentKey = queuedKey(player.getUniqueId());
+            if (queueKey.equals(currentKey)) {
+                msg(player, "You are already queued for " + kit + " (" + (ranked ? "Ranked" : "Unranked") + ", position " + position(player.getUniqueId()) + "). Use /leave to leave.");
+                return true;
             }
             leave(player.getUniqueId());
-            LinkedList<UUID> line=waiting.computeIfAbsent(clean(kit), k -> new LinkedList<>());
+            LinkedList<UUID> line = waiting.computeIfAbsent(queueKey, ignored -> new LinkedList<>());
             while (!line.isEmpty()) {
-                UUID otherId=line.removeFirst();
-                Player other=Bukkit.getPlayer(otherId);
+                UUID otherId = line.removeFirst();
+                Player other = Bukkit.getPlayer(otherId);
                 if (other != null && other.isOnline() && !matches.inMatch(otherId)) {
-                    if (matches.start(other,player,kit)) return;
+                    if (matches.start(other, player, kit, ranked)) return true;
                 }
             }
             line.add(player.getUniqueId());
-            msg(player,"Queued for " + kit + ". Position: " + line.size() + ". Use /leave or click this kit again to leave.");
+            msg(player, "Queued for " + kit + " (" + (ranked ? "Ranked" : "Unranked") + "). Position: " + line.size() + ". Use /leave to leave.");
+            return true;
         }
-        int count(String kit) { return waiting.getOrDefault(clean(kit), new LinkedList<>()).size(); }
-        String queuedKit(UUID id) {
-            for (Map.Entry<String, LinkedList<UUID>> entry : waiting.entrySet()) {
-                if (entry.getValue().contains(id)) return entry.getKey();
-            }
+        int count(String kit) { return count(kit, true) + count(kit, false); }
+        int count(String kit, boolean ranked) { return waiting.getOrDefault(key(kit, ranked), new LinkedList<>()).size(); }
+        private String queuedKey(UUID id) {
+            for (Map.Entry<String, LinkedList<UUID>> entry : waiting.entrySet()) if (entry.getValue().contains(id)) return entry.getKey();
             return null;
         }
+        String queuedKit(UUID id) {
+            String value = queuedKey(id);
+            if (value == null) return null;
+            int separator = value.indexOf(':');
+            return separator < 0 ? value : value.substring(separator + 1);
+        }
+        boolean queuedRanked(UUID id) {
+            String value = queuedKey(id);
+            return value != null && value.startsWith("ranked:");
+        }
         int position(UUID id) {
-            String kit = queuedKit(id);
-            if (kit == null) return 0;
-            return waiting.get(kit).indexOf(id) + 1;
+            String value = queuedKey(id);
+            if (value == null) return 0;
+            return waiting.get(value).indexOf(id) + 1;
         }
         boolean leave(UUID id) {
             boolean removed = false;
@@ -723,18 +768,20 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
                 new KitsMenuCommand().onCommand(p, c, "queue", new String[0]);
                 return true;
             }
-            if (a[0].equalsIgnoreCase("status")) {
+            if ((a[0].equalsIgnoreCase("ranked") || a[0].equalsIgnoreCase("unranked")) && a.length > 1) {
+                queues.join(p, a[1], a[0].equalsIgnoreCase("ranked"));
+            } else if (a[0].equalsIgnoreCase("status")) {
                 if (a.length > 1) {
                     msg(p,"Players waiting for " + a[1] + ": " + queues.count(a[1]));
                 } else {
                     String kit = queues.queuedKit(p.getUniqueId());
                     if (kit == null) msg(p, "You are not currently queued.");
-                    else msg(p, "Queue: " + kit + " | Position: " + queues.position(p.getUniqueId()) + " | Waiting: " + queues.count(kit) + ". Use /leave to leave.");
+                    else msg(p, "Queue: " + kit + " | Mode: " + (queues.queuedRanked(p.getUniqueId()) ? "Ranked" : "Unranked") + " | Position: " + queues.position(p.getUniqueId()) + " | Waiting: " + queues.count(kit, queues.queuedRanked(p.getUniqueId())) + ". Use /leave to leave.");
                 }
             } else if (a[0].equalsIgnoreCase("join") && a.length>1) queues.join(p,a[1]);
             else if (a[0].equalsIgnoreCase("leave")) {
                 msg(p, queues.leave(p.getUniqueId()) ? "You left the queue." : "You are not currently queued.");
-            } else msg(p,"Usage: /queue join <kit>, /queue leave or /queue status [kit]");
+            } else msg(p,"Usage: /queue [ranked|unranked] <kit>, /queue join <kit>, /queue leave or /queue status [kit]");
             return true;
         }
     }
@@ -776,7 +823,8 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
                 boolean queuedHere = name.equalsIgnoreCase(Objects.toString(queues.queuedKit(player.getUniqueId()), ""));
                 meta.setLore(List.of(
                         ChatColor.GRAY + (queuedHere ? "Click again to leave this queue" : "Click to queue for this kit"),
-                        ChatColor.DARK_GRAY + "Waiting: " + queues.count(name),
+                        ChatColor.DARK_GRAY + "Ranked waiting: " + queues.count(name, true),
+                        ChatColor.DARK_GRAY + "Unranked waiting: " + queues.count(name, false),
                         ChatColor.DARK_GRAY + "Your position: " + (queuedHere ? queues.position(player.getUniqueId()) : "Not queued"),
                         ChatColor.DARK_GRAY + "Icon: " + kits.icon(name).name()));
                 icon.setItemMeta(meta);
