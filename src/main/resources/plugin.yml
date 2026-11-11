@@ -29,7 +29,7 @@ commands:
     usage: /ffa <join|leave>
   party:
     description: Create and manage player parties
-    usage: /party <create|invite|accept|leave|kick|disband|info|chat>
+    usage: /party <create|invite|accept|leave|kick|disband|split|ffa|info|chat>
   achievements:
     description: View unlocked PvP achievements and points
     usage: /achievements
