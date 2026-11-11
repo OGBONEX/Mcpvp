@@ -7,7 +7,7 @@ group = 'com.ogbonex'
 base {
     archivesName = 'Mcpvp-Remake'
 }
-version = providers.gradleProperty('releaseVersion').getOrElse('0.7.14')
+version = providers.gradleProperty('releaseVersion').getOrElse('0.7.15')
 
 repositories {
     mavenCentral()
