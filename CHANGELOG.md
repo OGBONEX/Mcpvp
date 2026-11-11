@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.7.10
+- Added party creation, 60-second invitations, acceptance and configurable membership limits.
+- Added party info, private party chat, member kicking and leader-only disbanding.
+- Party leadership transfers automatically when the leader leaves or disconnects.
+- Registered `/party` and documented party commands.
+
 ## Release automation
 - Added a dedicated GitHub Actions release workflow for `v*` tags and manual version publishing.
 - Release assets include the compiled versioned plugin JAR and SHA-256 checksum.
