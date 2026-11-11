@@ -52,7 +52,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
         ranks = new RankManager(this);
         progression = new PvpProgressionManager(this);
         playerSettings = new PlayerSettingsManager();
-        displays = new LobbyDisplayManager(this, id -> stats.get(id, "wins"), ranks::getRank);
+        displays = new LobbyDisplayManager(this, id -> stats.get(id, "wins"), ranks::getRank, id -> playerSettings.enabled(id, "scoreboard", true));
         Bukkit.getScheduler().runTaskTimer(this, displays::refreshAll, 20L, 20L);
         loadLobby();
         getServer().getPluginManager().registerEvents(this, this);
@@ -191,8 +191,7 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
     @EventHandler public void onJoin(PlayerJoinEvent event) {
         Bukkit.getScheduler().runTaskLater(this, () -> {
             matches.restorePending(event.getPlayer());
-            displays.refresh(event.getPlayer());
-            playerSettings.apply(event.getPlayer());
+            for (Player online : Bukkit.getOnlinePlayers()) playerSettings.apply(online);
         }, 1L);
     }
 
@@ -829,7 +828,8 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
                 if (visible) player.showPlayer(McpvpPlugin.this, other);
                 else player.hidePlayer(McpvpPlugin.this, other);
             }
-            displays.refresh(player);
+            if (enabled(player.getUniqueId(), "scoreboard", true)) displays.refresh(player);
+            else player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
         }
     }
 
