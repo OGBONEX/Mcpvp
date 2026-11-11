@@ -1019,6 +1019,28 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             msg(target, "You were removed from the party.");
             broadcast(leader.getUniqueId(), target.getName() + " was removed from the party.");
         }
+        void split(Player leader) {
+            if (!isLeader(leader.getUniqueId())) { msg(leader, "Only the party leader can split the party."); return; }
+            LinkedHashSet<UUID> current = groups.get(leader.getUniqueId());
+            if (current == null || current.size() < 2) { msg(leader, "You need at least 2 players to split a party."); return; }
+            List<UUID> shuffled = new ArrayList<>(current);
+            Collections.shuffle(shuffled);
+            List<UUID> first = new ArrayList<>(), second = new ArrayList<>();
+            for (int i = 0; i < shuffled.size(); i++) (i % 2 == 0 ? first : second).add(shuffled.get(i));
+            UUID firstLeader = leader.getUniqueId();
+            if (!first.contains(firstLeader)) {
+                second.remove(firstLeader);
+                first.add(0, firstLeader);
+            }
+            UUID secondLeader = second.get(0);
+            LinkedHashSet<UUID> teamA = new LinkedHashSet<>(first);
+            LinkedHashSet<UUID> teamB = new LinkedHashSet<>(second);
+            groups.remove(firstLeader);
+            groups.put(firstLeader, teamA);
+            groups.put(secondLeader, teamB);
+            broadcast(firstLeader, "Party split complete. You are in Team A (" + teamA.size() + " players).");
+            broadcast(secondLeader, "Party split complete. You are in Team B (" + teamB.size() + " players).");
+        }
         void disband(Player leader) {
             if (!isLeader(leader.getUniqueId())) { msg(leader, "Only the party leader can disband the party."); return; }
             LinkedHashSet<UUID> members = groups.remove(leader.getUniqueId());
@@ -1091,11 +1113,16 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
                     }
                 }
                 case "disband" -> parties.disband(player);
+                case "split" -> parties.split(player);
+                case "ffa" -> {
+                    if (args.length != 3) msg(player, "Usage: /party ffa <arena> <kit>");
+                    else ffa.joinParty(player, parties.members(player.getUniqueId()), args[1], args[2]);
+                }
                 case "chat" -> {
                     if (args.length < 2) msg(player, "Usage: /party chat <message>");
                     else parties.chat(player, String.join(" ", Arrays.copyOfRange(args, 1, args.length)));
                 }
-                default -> msg(player, "Party commands: /party create, invite <player>, accept, leave, kick <player>, disband, info, chat <message>");
+                default -> msg(player, "Party commands: /party create, invite <player>, accept, leave, kick <player>, disband, split, ffa <arena> <kit>, info, chat <message>");
             }
             return true;
         }
@@ -1132,6 +1159,24 @@ public final class McpvpPlugin extends JavaPlugin implements Listener {
             active.put(player.getUniqueId(), new FfaSession(snapshot, arena, kit));
             player.teleport(spawn); kits.apply(player, kit); player.setGameMode(GameMode.SURVIVAL);
             msg(player, "Joined FFA in " + arena + " using " + kit + ". Use /ffa leave to return.");
+        }
+        void joinParty(Player requester, Set<UUID> members, String arena, String kit) {
+            if (!parties.isLeader(requester.getUniqueId())) { msg(requester, "Only the party leader can start party FFA."); return; }
+            if (members.size() < 2) { msg(requester, "Party FFA needs at least 2 party members."); return; }
+            Location spawn = arenas.get(arena, "spawn-a");
+            if (spawn == null || !arenas.hasRegion(arena)) { msg(requester, "FFA arena needs spawn-a and both region corners configured."); return; }
+            if (!kits.exists(kit)) { msg(requester, "Unknown kit. Use /kit list."); return; }
+            List<Player> online = new ArrayList<>();
+            for (UUID id : members) {
+                Player member = Bukkit.getPlayer(id);
+                if (member == null) { msg(requester, "Every party member must be online to start party FFA."); return; }
+                if (matches.inMatch(id) || queues.queuedKit(id) != null || inFfa(id)) {
+                    msg(requester, member.getName() + " must leave their match, queue or current FFA first."); return;
+                }
+                online.add(member);
+            }
+            for (Player member : online) join(member, arena, kit);
+            for (Player member : online) msg(member, "Your party entered FFA together in " + arena + " using " + kit + ".");
         }
         void leave(Player player) {
             FfaSession session = active.remove(player.getUniqueId());
