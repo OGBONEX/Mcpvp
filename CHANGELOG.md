@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.7.8
+- Added separate Ranked and Unranked matchmaking queues for each kit.
+- Added a queue-mode choice GUI after selecting a kit.
+- Added `/queue ranked <kit>` and `/queue unranked <kit>`.
+- ELO is now changed only by Ranked matches; Unranked matches leave rating unchanged.
+- Rematches preserve the previous match's queue mode.
+- Fixed queue matching so players are not silently removed if no arena is available.
+
 ## v0.7.5
 - Replaced the player-facing `/kits` command with `/queue`, which opens the kit-selection GUI.
 - Removed the `/kits` command registration; kit administration through `/kit create`, `/kit delete` and `/kit icon` remains available.
