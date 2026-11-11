@@ -1,4 +1,4 @@
-# SoulPvP configuration
+# Mcpvp-Remake configuration
 party:
   max-size: 8
 settings:
@@ -23,12 +23,12 @@ lobby:
   yaw: 0.0
   pitch: 0.0
 tab:
-  header: "&6&lSoulPvP"
+  header: "&6&lMcpvp-Remake"
   subheader: "&7Classic PvP Network"
-  footer: "&eOnline: &f%online% &8| &7SoulPvP"
+  footer: "&eOnline: &f%online% &8| &7Mcpvp-Remake"
 scoreboard:
   enabled: true
-  title: "&6&lSoulPvP"
+  title: "&6&lMcpvp-Remake"
   queue-label: "Use /queue"
 rank-prefixes:
   owner: "&4[Owner]"
