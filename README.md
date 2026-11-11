@@ -1,4 +1,4 @@
-# SoulPvP v0.7.11
+# SoulPvP v0.7.12
 
 A competitive Minecraft PvP system for **Paper 1.21.11**, built with **Java 21** and **Gradle**. Create custom kits, send players into fast matchmaking, challenge rivals, and run block-editable arenas that reset between matches.
 
