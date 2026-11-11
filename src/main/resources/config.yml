@@ -1,4 +1,4 @@
-# MCPvP configuration
+# SoulPvP configuration
 party:
   max-size: 8
 settings:
@@ -23,12 +23,12 @@ lobby:
   yaw: 0.0
   pitch: 0.0
 tab:
-  header: "&6&lMCPvP"
+  header: "&6&lSoulPvP"
   subheader: "&7Classic PvP Network"
-  footer: "&eOnline: &f%online% &8| &7MCPvP"
+  footer: "&eOnline: &f%online% &8| &7SoulPvP"
 scoreboard:
   enabled: true
-  title: "&6&lMCPvP"
+  title: "&6&lSoulPvP"
   queue-label: "Use /queue"
 rank-prefixes:
   owner: "&4[Owner]"
